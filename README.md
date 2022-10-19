@@ -1,6 +1,8 @@
 # db65816
 VS Code debugger for 65816 assembly code
 
+![Screenshot of db65816 debugger](img/db65816.png)
+
 # Features
 * Runs a program from reset vector, optionally stopping on entry
 * Supports multi-file programs
