@@ -41,5 +41,6 @@ I've included a very simple "hello world" example project in the [wp](wp/hello_w
 
 # Status and Limitations
 1. This is a work in progress and will likely remain so.  I make no claims to its usability or suitability for your uses.  Coding is just a hobby for me, so take care.  Much of the code hasn't been rigorously tested,is without error checking and likely is inefficient.  Still, hopefully it will help others get past the limited documentation regarding VS Code's implimentation of Microsoft's [Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/).  Another good starting point is Microsoft's [Mock-Debug](https://github.com/Microsoft/vscode-mock-debug) which was the starting point for this project.
-2. more to come...
+2. I got a Windows Defender warning of a Wacatac Trogen when downloading the zipped repository from GitHub.  My local repository and zips of them scan clean so this is likely a false positive.  However, if you are concerned, don't download or clone the repository.  It will be interesting to see if this continues as I update the repository.
+3. more to come...
 
