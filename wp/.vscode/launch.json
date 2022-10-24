@@ -1,0 +1,34 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"type": "65816",
+			"request": "launch",
+			"name": "Debug file",
+            "program": "${file}",
+            "stopOnEntry": true,
+		},
+		{
+			"type": "65816",
+			"request": "launch",
+			"name": "Lauch with args",
+            "program": "${file}",
+            "args": [
+                {
+                    "acia": "0x01ff20",
+                    "via": "0x01ff10",
+                    "sbin": "sforth.bin",
+                    "fbin": "block.bin"
+                }
+            ],
+            "stopOnEntry": true,
+            "cwd": "${cwd}"
+		},
+		{
+			"type": "65816",
+			"request": "attach",
+			"name": "Attach file",
+			"program": "${file}",
+		}
+	]
+}
