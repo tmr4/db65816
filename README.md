@@ -20,7 +20,7 @@ VS Code debugger for 65816 assembly code
 * Drill down on variables/watches that represent a memory range (variable ranges can be opened in a separate hex editor window allowing modification of the memory range)
 * Symbol address and value displayed when hovering over a symbol in source code
 * Call stack displayed when stepping through program.  Clicking on an entry opens the source code in an editor at that line.  On continue, call stack colapses stack to current instruction.
-* Integrated terminal window for input/output
+* Integrated terminal window for input/output with default read/write addresses at $f004 and $f001 respectively.
 * Source files listed in debug pane Loaded Scripts Explorer
 
 # Requirements
@@ -38,6 +38,14 @@ Clone this repository and open it in VS Code.  Open a terminal and type `install
 I've included a very simple "hello world" example project in the [wp](wp/hello_world.s) folder.  To run it, open the debug adapter extension project in VS Code and press F5 to start debugging.  VS Code will open a new window where you can run the hello world example.  Open hello_world.s, make sure "Debug File" is selected in the VS Code debug pane and press F5.  The program should pause at the start of the reset subroutine.
 
 ![Screenshot of db65816 debugger](img/hello_world.png)
+
+# Use
+The db65816 extension implements many of VS Code's debugging capabilities.  See [Debugging](https://code.visualstudio.com/docs/editor/debugging) for an overview of using the VS Code debugging interface.  In some cases, db65816 behaves slightly differently than standard:
+    * In addition to named function breakpoints, you can add an address as a function breakpoint.  This is especially useful to set a breakpoint at a location where a source file isn't available.  The address can be entered as either a decimal or hex (w/ a 0x prefix) value.
+    * Data breakpoints can only be set on the X, Y, K, B and D registers and only for write access.  Execution will break at an instruction that will write to one of these registers.  Note that unlike a normal data breakpoint, db65816 breaks at the instruction regardless is the value in the register will actually change.
+    * I use VS Code's exception breakpoint functionality to implement instruction mnemonic and opcode breakpoints.  You can add multiple instructions or opcodes separated by commas.  Instruction entries are case sensitive and compared to the actual source code, so CLC and clc are two distictive instructions.  In addition, you can break on macros by entering the macro name as an instruction breakpoint.
+    * Watches can be set for symbols in the symbol file.  Watches can be changes via the Set Value context menu item.  Watches can also be set for memory by address.  Enter the address either in decimal or hex (w/ a 0x prefix).  Memory ranges can also be watched.  Enter a memory range as the starting and ending address separated with a colon, such as start:end.  Memory ranges can be drilled down.
+    * Make sure to check the context menu in each area of the debugger to see what options are available.  THis is the only way to access manu functions.
 
 # Status and Limitations
 1. This is a work in progress and will likely remain so.  I make no claims to its usability or suitability for your uses.  Coding is just a hobby for me, so take care.  Much of the code hasn't been rigorously tested,is without error checking and likely is inefficient.  Still, hopefully it will help others get past the limited documentation regarding VS Code's implimentation of Microsoft's [Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/).  Another good starting point is Microsoft's [Mock-Debug](https://github.com/Microsoft/vscode-mock-debug) which was the starting point for this project.
