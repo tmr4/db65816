@@ -88,7 +88,7 @@ export class SourceMap {
     private sourceMap = new Map<number, ISourceMap>(); // binary address/source mapping
     private reverseMap = new Map<string, Map<number, number>>(); // source line #/binnary address mapping
 
-    private default_segments: IDefualtSegment[] = [ 
+    private default_segments: IDefualtSegment[] = [
         { directive: ".bss", name: "BSS" },
         { directive: ".code", name: "CODE" },
         { directive: ".data", name: "DATA" },
@@ -157,7 +157,7 @@ export class SourceMap {
             if (match) {
                 // save symbol
                 // don't bother with local symbols
-                if(!match[2].startsWith('@')) {
+                if (!match[2].startsWith('@')) {
                     this.symbolMap.set(match[2], { address: parseInt(match[1], 16), size: 1, source: '' });
                 }
             }
@@ -174,7 +174,7 @@ export class SourceMap {
         let module_name = '';
         let module_segments: ISegment[] = [];
         let segs: string[] = [];   // temp segments
-        
+
         // loop through map file capturing:
         //  1) modules and their associated segments/offsets
         //  2) segments and their associated starting address
@@ -198,23 +198,23 @@ export class SourceMap {
             if (processing === "Module") {
                 if (line === '') {
                     // we're done parsing modules area
-                    this.modules.push( { name: module_name, segments: module_segments } );
+                    this.modules.push({ name: module_name, segments: module_segments });
                     processing = '';
                 } else if (line[0] === " ") {
                     // a line with segment/offset pair
                     let seg = line.split(' ').filter(e => e !== '');
                     let offset = seg[1].split("=");
-                    module_segments.push( { name: seg[0], start: parseInt(offset[1], 16) } );
+                    module_segments.push({ name: seg[0], start: parseInt(offset[1], 16) });
 
                     // note that segment is used if not included already
-                    if(segs.filter(seg => seg === seg[0]).length === 0) {
+                    if (segs.filter(seg => seg === seg[0]).length === 0) {
                         segs.push(seg[0]);
                     }
                 } else {
                     // a new module section
                     // save previous module's segment/offset pairs
                     // and get ready to process next module
-                    this.modules.push( { name: module_name, segments: module_segments } );
+                    this.modules.push({ name: module_name, segments: module_segments });
                     module_name = '';
                     module_segments = [];
                     processing = "Modules";
@@ -297,7 +297,7 @@ export class SourceMap {
     //            else if (args.c && macro && line.indexOf(".endmacro") >= 0) {
     //                macro = false
     //            }
-                if(line.length >= 9 && line[8] === '1') {
+                if (line.length >= 9 && line[8] === '1') {
                     // parse line into relative address, assembler code and source line (label and comment excluded)
                     let match: RegExpExecArray | null;
                     match = reg3.exec(line);
@@ -344,7 +344,7 @@ export class SourceMap {
                             // Try to change to this segment
                             const getSeg = this.get_seg(seg);
                             const getMod = module.segments.find(s => s.name === seg);
-                            if(getSeg !== undefined && getMod !== undefined) {
+                            if (getSeg !== undefined && getMod !== undefined) {
                                 seg_base = getSeg.segBase;
                                 seg_file = getSeg.segFile;
                                 seg_offset = getMod.start;
@@ -377,7 +377,7 @@ export class SourceMap {
                             //seg_file.write(oline)
                             // *** TODO: looks like we can do some consolidation here ***
                             if ((line.slice(11, 22).indexOf("xx") >= 0) || ((s_source.length > 0) && s_source.startsWith('.'))) {
-                                if(label) {
+                                if (label) {
                                     if (!line.includes(line.slice(24))) {
                                         console.log("source and listing don't match at module/line: " + module.name + n.toString());
                                     }
@@ -402,7 +402,7 @@ export class SourceMap {
                                             case 'asciiz':
                                                 let i = s_source.indexOf('"');
                                                 let j = s_source.lastIndexOf('"');
-                                                sym.size = s_source.slice(i+1, j).length;
+                                                sym.size = s_source.slice(i + 1, j).length;
                                                 break;
                                             case 'byte':
                                             default:
@@ -414,7 +414,7 @@ export class SourceMap {
                                     sline++;
                                 }
                             } else {
-                                if(s_source.length > 0) {
+                                if (s_source.length > 0) {
                                     if (!line.includes(line.slice(24))) {
                                         console.log("source and listing don't match at module/line: " + module.name + n.toString());
                                     }
@@ -422,7 +422,7 @@ export class SourceMap {
                                     this.sourceMap.set(addr, {
                                         address: addr,
                                         module: module.name,
-                                        opcode: parseInt(acode.slice(0,2), 16),
+                                        opcode: parseInt(acode.slice(0, 2), 16),
                                         instruction: s_source.trim(),
                                         sourceLine: sline++,
                                         listingLine: n,
@@ -505,7 +505,7 @@ export class SourceMap {
         let seg_offset = module.segments[0].start;
 
         const getSeg = this.get_seg(seg);
-        
+
         //seg_file.write("\nCurrent file: " + module[0] + ".lst\n")
     //    seg_file.write("Current segment: " + seg_cur + "\n")
         return { segment: seg, segFile: getSeg!.segFile, segBase: getSeg!.segBase, segOffset: seg_offset };
@@ -515,7 +515,7 @@ export class SourceMap {
         let seg_base = this.segments.find(seg => seg.name === segName)?.start;
         let seg_file = this.segFiles.find(seg => seg.name === segName)?.file;
 
-        if(seg_base === undefined || seg_file === undefined) {
+        if (seg_base === undefined || seg_file === undefined) {
             return undefined;
         } else {
             return { segFile: seg_file, segBase: seg_base };

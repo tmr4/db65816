@@ -12,13 +12,15 @@
 			"type": "65816",
 			"request": "launch",
 			"name": "Lauch with args",
-			"program": "${file}",
+			"program": "${cwd}",
 			"args": [
 				{
+					"sbin": "${cwd}\\listing\\sforth.bin",
+					"src":  "${cwd}\\src\\",
+					"list": "${cwd}\\listing\\",
 					"acia": "0x01ff20",
-					"via": "0x01ff10",
-					"sbin": "sforth.bin",
-					"fbin": "block.bin"
+					"via":  "0x01ff10",
+					"fbin": "${cwd}\\listing\\block.bin",
 				}
 			],
 			"stopOnEntry": true,

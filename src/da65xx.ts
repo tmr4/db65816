@@ -178,7 +178,7 @@ export class Debug65xxSession extends LoggingDebugSession {
 //            this.terminal.terminalWrite((message as OutputEvent).body.output);
 
             let category: string;
-            switch(type) {
+            switch (type) {
                 case 'prio': category = 'important'; break;
                 case 'out': category = 'stdout'; break;
                 case 'err': category = 'stderr'; break;
@@ -216,7 +216,7 @@ export class Debug65xxSession extends LoggingDebugSession {
         if (args.supportsMemoryEvent) {
             this._useMemoryEvent = true;
         }
-        
+
         // build and return the capabilities of this debug adapter:
         response.body = response.body || {};
 
@@ -297,7 +297,7 @@ export class Debug65xxSession extends LoggingDebugSession {
         // stepInTargetsRequest to reveal a sub context menu with possible step in targets
         // on that line.  This seems of little utility for me.
         // Note that the Step In button and Run menu item are not affected by this
-        //response.body.supportsStepInTargetsRequest = true;    
+        //response.body.supportsStepInTargetsRequest = true;
 
         // make VS Code support completion in REPL
 //        response.body.supportsCompletionsRequest = true; // in REPL (see mock-debug)
@@ -352,7 +352,7 @@ export class Debug65xxSession extends LoggingDebugSession {
             this.cwd = args.cwd;
         }
 
-        if(args.args) {
+        if (args.args) {
             let args0 = args.args[0];
 
             sbin = args0.sbin;
@@ -363,7 +363,7 @@ export class Debug65xxSession extends LoggingDebugSession {
             let extension = path.extname(args0.sbin);
             binBase = path.basename(args0.sbin, extension);
 
-            if(args0.src) {
+            if (args0.src) {
                 this.src = args0.src;
             } else {
                 this.src = this.cwd;
@@ -488,7 +488,7 @@ export class Debug65xxSession extends LoggingDebugSession {
                     sf.column = this.convertDebuggerColumnToClient(f.column);
                 }
                 if (typeof f.instruction === 'number') {
-                    const address = this.formatAddress(f.instruction,6);
+                    const address = this.formatAddress(f.instruction, 6);
                     sf.name = `${address} ${f.name}`;
                     sf.instructionPointerReference = address;
                 }
@@ -649,7 +649,7 @@ export class Debug65xxSession extends LoggingDebugSession {
 
             if (args.filter && args.filter === 'indexed') {
                 // paged memory request
-                if(args.start !== undefined) {
+                if (args.start !== undefined) {
                     // remove paged memory flag ($10000000) from variablesReference
                     start = (ref & 0xfffffff) + args.start;
                 }
@@ -661,7 +661,7 @@ export class Debug65xxSession extends LoggingDebugSession {
                 // ref = (address * 16) + count
                 // *** TODO: this can overlap with variable handles for low memory ranges ***
 
-                start = Math.trunc(ref/16);
+                start = Math.trunc(ref / 16);
                 end = start + (ref & 0xf);
             }
 
@@ -696,10 +696,10 @@ export class Debug65xxSession extends LoggingDebugSession {
             value = value === 0 ? 0 : 1;
             this.registers.setFlag(name, value);
         } else if (ref > 0) {
-//            let address = Math.trunc(ref / 16);
-            let address = parseInt(args.name,16);
-            let memoryReference = Math.trunc(args.variablesReference/16);
-//            value = value & (this.ee65xx.mpu.mode ? 0xff : 0xffff);
+            //            let address = Math.trunc(ref / 16);
+            let address = parseInt(args.name, 16);
+            let memoryReference = Math.trunc(args.variablesReference / 16);
+            //            value = value & (this.ee65xx.mpu.mode ? 0xff : 0xffff);
             value = value & 0xff;
             this.ee65xx.obsMemory.memory[address] = value;
 
@@ -858,10 +858,10 @@ export class Debug65xxSession extends LoggingDebugSession {
     // continue execution until we're out of the current call frame into the next, or single step if one doesn't exist
     protected stepOutRequest(response: DebugProtocol.StepOutResponse, args: DebugProtocol.StepOutArguments): void {
         if (!this.ee65xx.mpu.waiting) {
-            if(this.inCall) {
+            if (this.inCall) {
                 this.ee65xx.stepTo(this.callFrames[0].nextaddress);
                 this.callFrames.shift();
-                if(this.callFrames.length === 0) {
+                if (this.callFrames.length === 0) {
                     this.inCall = false;
                 }
             }
@@ -918,8 +918,8 @@ export class Debug65xxSession extends LoggingDebugSession {
                 let symbol = this.sourceMap.getSymbol(args.expression);
                 let mem = this.ee65xx.obsMemory.memory;
 
-                if(symbol) {
-                    switch(symbol.size) {
+                if (symbol) {
+                    switch (symbol.size) {
                         case 1:
                             value = mem[symbol.address].toString(16);
                             break;
@@ -927,7 +927,7 @@ export class Debug65xxSession extends LoggingDebugSession {
                             value = (mem[symbol.address] + (mem[symbol.address + 1] << 8)).toString(16);
                             break;
                         case 4:
-                            value = (mem[symbol.address] + 
+                            value = (mem[symbol.address] +
                                 (mem[symbol.address + 1] << 8) +
                                 (mem[symbol.address + 2] << 16) +
                                 (mem[symbol.address + 3] << 24)).toString(16);
@@ -953,10 +953,10 @@ export class Debug65xxSession extends LoggingDebugSession {
                     // check for a valid memory range
                     // *** note hovering will never end up here as it won't capture a ':' ***
                     let range = args.expression.split(':');
-                    if(range.length === 2) {
+                    if (range.length === 2) {
                         let start = parseInt(range[0]);
                         let end = parseInt(range[1]);
-                        if(end >= start) {
+                        if (end >= start) {
                             value = toHexString(mem.slice(start, end + 1));
                             // display as paged memory
                             // I don't want to create a handle for every memory range and
@@ -1147,7 +1147,7 @@ export class Debug65xxSession extends LoggingDebugSession {
     protected loadedSourcesRequest(response: DebugProtocol.LoadedSourcesResponse, args: DebugProtocol.LoadedSourcesArguments): void {
         let sources: DebugProtocol.Source[] = [];
 
-        for( let module of this.sourceMap.getModules()) {
+        for (let module of this.sourceMap.getModules()) {
             sources.push(this.createSource(path.join(this.src, module + '.s')));
         }
 
@@ -1240,7 +1240,7 @@ export class Debug65xxSession extends LoggingDebugSession {
     // public methods
 
     // check if a breakpoint has been hit
-    // Currently breakpoints can be set on valid source code lines and cettain 
+    // Currently breakpoints can be set on valid source code lines and cettain
     // registers (see code below).
     public checkBP(): boolean {
         let address = this.registers.address;
@@ -1253,7 +1253,7 @@ export class Debug65xxSession extends LoggingDebugSession {
         // file through normal UI mechanisms (and thus can't be sent on Forth code
         // in the data area).  We could add the specific capability, like the
         // ToggleFormatting context menu in Mock-Debug, or perhaps a somewhat hack
-        // like a local "address" variable that when set adds a source or data 
+        // like a local "address" variable that when set adds a source or data
         // breakpoint.  This might also work well with instruction breakpoints
         // but those only work in disassembly view and thus have their own
         // implementation issues. ***
@@ -1270,7 +1270,7 @@ export class Debug65xxSession extends LoggingDebugSession {
         if (this.dataBreakpoints.size) {
             // Only write access to the X, Y, K, B and D registers are considered.
             // *** TODO: It would be nice to be able to set a data breakpoint on a
-            // memory address.  It looks like you can only set a data breakpoint 
+            // memory address.  It looks like you can only set a data breakpoint
             // in VS Code on an item in the Variables pane of the UI through normal
             // UI mechanisms, thus we'd have to add this capability.  Consider
             // adding capability here. ***
@@ -1285,7 +1285,7 @@ export class Debug65xxSession extends LoggingDebugSession {
             // The UI labels these breakpoints as break on change but below only consider
             // that the value may have changed with the instruction *** TODO: consider updating ***
             reg_write.push(/^(dex|inx|ldx|plx|tax|tsx|tyx)/ig); // X register
-            reg_write.push(/^(dey|iny|ldy|ply|tay|txy)/ig);     // Y 
+            reg_write.push(/^(dey|iny|ldy|ply|tay|txy)/ig);     // Y
             reg_write.push(/^(jsl|rtl|jml)/ig);                 // K (program bank) *** TODO: I don't consider jmp forms of long addressing ***
             reg_write.push(/^(plb)/ig);                         // B (data bank)
             reg_write.push(/^(pld|tcd)/ig);                     // D (direct page)
@@ -1337,7 +1337,7 @@ export class Debug65xxSession extends LoggingDebugSession {
             let opcode = this.sourceMap.get(address)?.opcode;
             if (opcode) {
                 let brkCodes = this.opcodeExceptions.split(',');
-                if(brkCodes) {
+                if (brkCodes) {
                     for (let brkCode of brkCodes.values()) {
                         if (opcode === parseInt(brkCode, 16)) {
                             this.sendEvent(new StoppedEvent(opcode.toString(16), Debug65xxSession.threadID));
@@ -1410,13 +1410,13 @@ export class Debug65xxSession extends LoggingDebugSession {
         // add Forth stacks if we're using Forth
         if (fbin) {
             // we use the X register as the Forth data and return stack pointers as well as the
-            // floating-point stack pointer.  The X register is also used as an index register 
+            // floating-point stack pointer.  The X register is also used as an index register
             // on occasion.  We'll use a hardcoded stack range for now (*** TODO: link to config file)
             // The floating-point and forth return stack pointers are their respective
             // variables when X isn't in their range, otherwise X represents the most current
             // pointer.  It isn't as easy with the Forth data stack as it's pointer is pushed
             // to the hardware stack when X is used for something else (*** TODO: reconsider this ***).
-            // accurately as we can compare the value of the X register to the 
+            // accurately as we can compare the value of the X register to the
             // stack memory ranges
             const FDSSIZE = 0x1000;
             const FRSSIZE = 0x800;
@@ -1552,7 +1552,7 @@ export class Debug65xxSession extends LoggingDebugSession {
                 if (!bp.verified) {
 
                     // we're only validating breakpoints in files in our source directory
-                    if(dir.toLowerCase() === this.src.slice(0, -1).toLowerCase()) {
+                    if (dir.toLowerCase() === this.src.slice(0, -1).toLowerCase()) {
                         // check if breakpoint is on a valid line
                         let bpAddress = this.sourceMap.getRev(file, bp.line);
 
@@ -1706,4 +1706,3 @@ export class Debug65xxSession extends LoggingDebugSession {
     }
 
 }
-
