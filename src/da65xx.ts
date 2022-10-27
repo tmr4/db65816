@@ -366,19 +366,19 @@ export class Debug65xxSession extends LoggingDebugSession {
             if(args0.src) {
                 this.src = args0.src;
             } else {
-                this.src = this.cwd + '\\';
+                this.src = this.cwd;
             }
             if (args0.list) {
                 list = args0.list;
             } else {
-                list = this.cwd + '\\';
+                list = this.cwd;
             }
         } else {
             let extension = path.extname(this.program);
             binBase = path.basename(this.program, extension);
-            sbin = this.cwd + '\\' + binBase + '.bin';
-            this.src = this.cwd + '\\';
-            list = this.cwd + '\\';
+            sbin = path.join(this.cwd, binBase + '.bin');
+            this.src = this.cwd;
+            list = this.cwd;
         }
 
         // prepare source map
@@ -482,7 +482,7 @@ export class Debug65xxSession extends LoggingDebugSession {
         response.body = {
             stackFrames: stk.frames.map((f, ix) => {
                 // fix up source file path
-                const sf: DebugProtocol.StackFrame = new StackFrame(f.index, f.name, this.createSource(this.src + f.file), this.convertDebuggerLineToClient(f.line));
+                const sf: DebugProtocol.StackFrame = new StackFrame(f.index, f.name, this.createSource(path.join(this.src, f.file)), this.convertDebuggerLineToClient(f.line));
                 sf.moduleId = f.file;
                 if (typeof f.column === 'number') {
                     sf.column = this.convertDebuggerColumnToClient(f.column);
@@ -1148,7 +1148,7 @@ export class Debug65xxSession extends LoggingDebugSession {
         let sources: DebugProtocol.Source[] = [];
 
         for( let module of this.sourceMap.getModules()) {
-            sources.push(this.createSource(this.src + module + '.s'));
+            sources.push(this.createSource(path.join(this.src, module + '.s')));
         }
 
         response.body = {

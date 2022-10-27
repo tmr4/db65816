@@ -103,7 +103,7 @@ export class SourceMap {
     public constructor(dir: string, basename: string) {
         this.basename = basename;
 
-        this.createSymbolMap(dir + basename + '.sym');
+        this.createSymbolMap(path.join(dir, basename + '.sym'));
         this.createSourceMap(dir, basename);
         this.createReverseMap();
     }
@@ -249,7 +249,7 @@ export class SourceMap {
     }
 
     private createSourceMap(dir: string, basename: string) {
-        this.parse_map(dir + basename + '.map');
+        this.parse_map(path.join(dir, basename + '.map'));
 
         // Regular expressions used to parse portions of listing line) {
         // Isolate segment directive and it's segment label
@@ -272,7 +272,7 @@ export class SourceMap {
         let reg3 = /^([A-F0-9]{6})(?:r\s\d\s*)((?:[0-9A-Frx]{2}\s){0,4})(?:\s*)([A-z0-9@]+[:]+)?(?:\s*)([^;]*)/;
 
         this.modules.forEach(module => {
-            let file = dir + module.name + ".lst";
+            let file = path.join(dir, module.name + ".lst");
             let m = fs.readFileSync(file);
             let lines = new TextDecoder().decode(m).split(/\r?\n/);
             let sline = 0;
