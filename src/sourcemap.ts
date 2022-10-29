@@ -68,7 +68,7 @@ export class SourceMap {
     private segments: ISegment[] = [];   // recodes map file segments and their associated start address
     private segFiles: ISegFile[] = [];   // stores temp file object for each segment
 
-    public constructor(srcDir: string, listDir: string, basename: string) {
+    public constructor(srcDir: string, listDir: string, basename: string, extension: string) {
         let dbgFile = false;
         let file = path.join(listDir, basename + '.dbg');
 
@@ -80,7 +80,7 @@ export class SourceMap {
         // that didn't work, try creating the maps with the listing, symbol and map files
         if (!dbgFile) {
             this.createSymbolMap(path.join(listDir, basename + '.sym'));
-            this.createSourceMap(srcDir, listDir, basename);
+            this.createSourceMap(srcDir, listDir, basename, extension);
         }
 
         this.createReverseMap();
@@ -303,7 +303,7 @@ export class SourceMap {
         }
     }
 
-    private createSourceMap(srcDir: string, listDir: string, basename: string) {
+    private createSourceMap(srcDir: string, listDir: string, basename: string, extension: string) {
         const default_segments: IDefualtSegment[] = [
         { directive: ".bss", name: "BSS" },
         { directive: ".code", name: "CODE" },
@@ -349,7 +349,7 @@ export class SourceMap {
             let seg = seg_cur;
             let macro = false;
 
-            this.sourceFiles.push(path.join(srcDir, module.name + ".s")); // *** TODO: hardcoding extension here ***
+            this.sourceFiles.push(path.join(srcDir, module.name + extension)); // *** TODO: hardcoding extension here ***
             for (let n = 0; n < lines.length; n++) {
                 let line = lines[n];
 

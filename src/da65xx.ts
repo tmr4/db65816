@@ -344,6 +344,7 @@ export class Debug65xxSession extends LoggingDebugSession {
         let via: number | undefined;
         let binBase = '';
         let list = '';
+        let extension = '';
 
         this.program = args.program;
         if (args.cwd === undefined) {
@@ -374,7 +375,7 @@ export class Debug65xxSession extends LoggingDebugSession {
                 list = this.cwd;
             }
         } else {
-            let extension = path.extname(this.program);
+            extension = path.extname(this.program);
             binBase = path.basename(this.program, extension);
             sbin = path.join(this.cwd, binBase + '.bin');
             this.src = this.cwd;
@@ -382,7 +383,7 @@ export class Debug65xxSession extends LoggingDebugSession {
         }
 
         // prepare source map
-        this.sourceMap = new SourceMap(this.src, list, binBase);
+        this.sourceMap = new SourceMap(this.src, list, binBase, extension);
 
         // start 65816 execution engine
         this.ee65xx.start(sbin, fbin, acia, via, !!args.stopOnEntry, !args.noDebug);
