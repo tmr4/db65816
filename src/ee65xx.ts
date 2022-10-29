@@ -15,7 +15,7 @@ var buf = Buffer.alloc(0);
 // and flushed to the console upon receipt of a CR
 function putc(value: number): void {
     // gather putc characters until EOL
-    if(value === 0xd) {     // is CR
+    if (value === 0xd) {     // is CR
         console.log(buf.toString());   // console log will add the CR
         buf = Buffer.alloc(0);           // clear buffer for next time
     }
@@ -24,7 +24,7 @@ function putc(value: number): void {
         var bufarray = [buf, buf1];
 
         // add character to buffer
-//        buf = buf + String.fromCharCode(value);
+        //buf = buf + String.fromCharCode(value);
         buf = Buffer.concat(bufarray);
     }
 }
@@ -38,8 +38,8 @@ function getc(value: number): void {
 // file (*.lst), simulating "running" through the source code line-by-line.  EE65xx
 // exposes several methods allowing the debug adapter to control the simulation.
 // EE65xx supports typical stepping and breakpoint functionality as the core of the
-// "debugging support".  
-// EE65xx is completely independent from VS Code and the 
+// "debugging support".
+// EE65xx is completely independent from VS Code and the
 // Debug Adapter and can be run as a standalone simulator without debugging.
 export class EE65xx extends EventEmitter {
 
@@ -48,11 +48,9 @@ export class EE65xx extends EventEmitter {
     private isDebug!: boolean;
     private da65xx: Debug65xxSession;
 
-//    private filename: string = '';
-
     private dbInt!: Interrupts;
-//    aciaAddr!: number;
-//    viaAddr!: number;
+    //aciaAddr!: number;
+    //viaAddr!: number;
 
     public mpu!: MPU65816;
 
@@ -77,7 +75,7 @@ export class EE65xx extends EventEmitter {
 
         terminalStart('65816 Debug', viaAddr ? true : false); // start debug terminal if not already started
         this.isDebug = debug;
-        
+
         this.loadBinary(bsource);
 
         this.mpu = new MPU65816(this.obsMemory.obsMemory);
@@ -91,9 +89,9 @@ export class EE65xx extends EventEmitter {
             //this.obsMemory.subscribeToWrite(this.getcAddr, getc); // = 0xf004
         }
 
-        if(aciaAddr) {
+        if (aciaAddr) {
             //this.aciaAddr = aciaAddr;
-            if(!this.dbInt) {
+            if (!this.dbInt) {
                 this.dbInt = new Interrupts(this, this.mpu);
             }
             this.dbInt.addACIA(aciaAddr, fsource, this.obsMemory);
@@ -105,7 +103,7 @@ export class EE65xx extends EventEmitter {
 
         // *** TODO: continue doesn't make any sense here we need something similar to loop in childp ***
         if (debug) {
-            if(!stopOnEntry) {
+            if (!stopOnEntry) {
                 this.continue();
             }
             else {
@@ -138,8 +136,8 @@ export class EE65xx extends EventEmitter {
 
     // Execute the current line.
     // Returns true if execution sent out a stopped event and needs to stop.
-	public step(stopOnStep: boolean): boolean {
-//        let mpu = this.mpu;
+    public step(stopOnStep: boolean): boolean {
+        //let mpu = this.mpu;
 
         if (this.dbInt && this.dbInt.enabled) {
             this.dbInt.trip();
@@ -212,4 +210,3 @@ export class EE65xx extends EventEmitter {
     }
 
 }
-

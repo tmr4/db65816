@@ -42,9 +42,9 @@ interface IRuntimeStackFrame {
 }
 
 /**
- * This interface describes the da65816 specific launch attributes
+ * This interface describes the db65816 specific launch attributes
  * (which are not part of the Debug Adapter Protocol).
- * The schema for these attributes lives in the package.json of the da65816 extension.
+ * The schema for these attributes lives in the package.json of the db65816 extension.
  * The interface should always match this schema.
  */
 interface ILaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
@@ -102,7 +102,7 @@ export class Debug65xxSession extends LoggingDebugSession {
     private src!: string;   // source directory
 
     // source, data and function breakpoints
-    private breakpoints = new Map<string, IRuntimeBreakpoint[]>();
+    private breakpoints = new Map<number, IRuntimeBreakpoint[]>();
     private dataBreakpoints = new Map<string, string>();
     // *** TODO: probably makes sense to map function breakpoints by source.
     // Figure out how to do this. ***
@@ -134,9 +134,9 @@ export class Debug65xxSession extends LoggingDebugSession {
     public constructor() {
         super("da65816.txt");
 
-        // this debugger uses zero-based lines and columns
-        this.setDebuggerLinesStartAt1(false);
-        this.setDebuggerColumnsStartAt1(false);
+        // this debugger does not use zero-based lines and columns
+        this.setDebuggerLinesStartAt1(true);
+        this.setDebuggerColumnsStartAt1(true);
 
         // create 65816 execution engine
         this.ee65xx = new EE65xx(this);
@@ -382,7 +382,7 @@ export class Debug65xxSession extends LoggingDebugSession {
         }
 
         // prepare source map
-        this.sourceMap = new SourceMap(list, binBase);
+        this.sourceMap = new SourceMap(this.src, list, binBase);
 
         // start 65816 execution engine
         this.ee65xx.start(sbin, fbin, acia, via, !!args.stopOnEntry, !args.noDebug);
@@ -411,21 +411,16 @@ export class Debug65xxSession extends LoggingDebugSession {
     // *** TODO: consider reconfiguring to remove asyn ***
 //    protected setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments): void {
 
-//        const source = this.normalizePathAndCasing(args.source.path as string);
-        // args.source.path has problematic capitalization for using as a breakpoint map key
-        // since we'll only validate breakpoints in the source directory, we can use source name as a key
-        // we'll take care of that in setBreakpoint and verifyBreakpoints
-        const source = args.source.path as string;
-//        const source = args.source.name as string;
-        let file = path.basename(source);
+        var fileId = this.sourceMap.getSourceId(args.source.path as string);
+
         const clientLines = args.lines || [];
 
         // clear all breakpoints for this file
-        this.clearBreakpoints(file);
+        this.clearBreakpoints(fileId);
 
         // set and verify source breakpoints
         const actualBreakpoints0 = clientLines.map(async l => {
-            const { verified, line, id } = this.setBreakpoint(source, this.convertClientLineToDebugger(l));
+            const { verified, line, id } = this.setBreakpoint(fileId, this.convertClientLineToDebugger(l));
             const bp = new Breakpoint(verified, this.convertDebuggerLineToClient(line)) as DebugProtocol.Breakpoint;
             bp.id = id;
             return bp;
@@ -436,6 +431,7 @@ export class Debug65xxSession extends LoggingDebugSession {
         response.body = {
             breakpoints: actualBreakpoints
         };
+
         this.sendResponse(response);
     }
 
@@ -459,7 +455,7 @@ export class Debug65xxSession extends LoggingDebugSession {
             const stackFrame: IRuntimeStackFrame = {
                 index: 0,
                 name: pos.instruction,
-                file: pos.module + '.s',
+                file: this.sourceMap.getSourceFile(pos.fileId),
 //                line: pos.line, // *** TODO: we should fix up line # when it's not in source map ***
                 line: pos.sourceLine,
                 column: 0,
@@ -482,11 +478,9 @@ export class Debug65xxSession extends LoggingDebugSession {
         response.body = {
             stackFrames: stk.frames.map((f, ix) => {
                 // fix up source file path
-                const sf: DebugProtocol.StackFrame = new StackFrame(f.index, f.name, this.createSource(path.join(this.src, f.file)), this.convertDebuggerLineToClient(f.line));
+                const sf: DebugProtocol.StackFrame = new StackFrame(f.index, f.name, this.createSource(f.file), this.convertDebuggerLineToClient(f.line));
                 sf.moduleId = f.file;
-                if (typeof f.column === 'number') {
-                    sf.column = this.convertDebuggerColumnToClient(f.column);
-                }
+                sf.column = 0;
                 if (typeof f.instruction === 'number') {
                     const address = this.formatAddress(f.instruction, 6);
                     sf.name = `${address} ${f.name}`;
@@ -813,13 +807,10 @@ export class Debug65xxSession extends LoggingDebugSession {
                 if (pos !== undefined) {
                     // set up stackframe for step into JSR and JSL
                     let nextAddress = pos.address + ((opCode === 0x22) ? 4 : 3);
-                    let line = this.sourceMap.get(pos.address);
-                    // let nextLine = this.sourceMap.get(nextAddress);
                     let frame: IRuntimeStackFrame = {
                         index: 1,
                         name: pos.instruction,
-                        file: pos.module + '.s',
-//                        line: pos.line,
+                        file: this.sourceMap.getSourceFile(pos.fileId),
                         line: pos.sourceLine,
                         column: 0,
                         instruction: pos.address,
@@ -1147,8 +1138,8 @@ export class Debug65xxSession extends LoggingDebugSession {
     protected loadedSourcesRequest(response: DebugProtocol.LoadedSourcesResponse, args: DebugProtocol.LoadedSourcesArguments): void {
         let sources: DebugProtocol.Source[] = [];
 
-        for (let module of this.sourceMap.getModules()) {
-            sources.push(this.createSource(path.join(this.src, module + '.s')));
+        for (let file of this.sourceMap.getSourceFiles()) {
+            sources.push(this.createSource(file));
         }
 
         response.body = {
@@ -1244,8 +1235,7 @@ export class Debug65xxSession extends LoggingDebugSession {
     // registers (see code below).
     public checkBP(): boolean {
         let address = this.registers.address;
-        let module = this.sourceMap.get(address)?.module;
-        let source = module ? module + '.s' : '';   // *** TODO: this hardwires source extention ***
+        let fileId = this.sourceMap.get(address)?.fileId;
 
         // is there a source breakpoint at this address?
         // *** TODO: It would be nice to be able to set a source breakpoint on a
@@ -1257,7 +1247,7 @@ export class Debug65xxSession extends LoggingDebugSession {
         // breakpoint.  This might also work well with instruction breakpoints
         // but those only work in disassembly view and thus have their own
         // implementation issues. ***
-        const breakpoints = this.breakpoints.get(source);
+        const breakpoints = fileId !== undefined ? this.breakpoints.get(fileId) : undefined;
         if (breakpoints) {
             const bps = breakpoints.filter(bp => bp.address === address);
             if (bps.length > 0) {
@@ -1334,7 +1324,7 @@ export class Debug65xxSession extends LoggingDebugSession {
             }
         }
         if (this.opcodeExceptions) {
-            let opcode = this.sourceMap.get(address)?.opcode;
+            let opcode = this.ee65xx.obsMemory.memory[address];
             if (opcode) {
                 let brkCodes = this.opcodeExceptions.split(',');
                 if (brkCodes) {
@@ -1502,18 +1492,19 @@ export class Debug65xxSession extends LoggingDebugSession {
 
     // Set breakpoint in file at given line
     // source is assumed to be normaized
-    private setBreakpoint(source: string, line: number): IRuntimeBreakpoint {
+    private setBreakpoint(fileId: number | undefined, line: number): IRuntimeBreakpoint {
         const bp: IRuntimeBreakpoint = { verified: false, line, id: this.breakpointId++, address: 0 };
-        let file = path.basename(source);
-        let bps = this.breakpoints.get(file);
-        if (!bps) {
-            bps = new Array<IRuntimeBreakpoint>();
-            this.breakpoints.set(file, bps);
+
+        if (fileId !== undefined) {
+            let bps = this.breakpoints.get(fileId);
+            if (!bps) {
+                bps = new Array<IRuntimeBreakpoint>();
+                this.breakpoints.set(fileId, bps);
+            }
+            bps.push(bp);
+
+            this.verifyBreakpoints(fileId);
         }
-        bps.push(bp);
-
-        this.verifyBreakpoints(source);
-
         return bp;
     }
 
@@ -1534,34 +1525,31 @@ export class Debug65xxSession extends LoggingDebugSession {
 
     // Clear all breakpoints in file
     // source is assumed to be normaized
-    private clearBreakpoints(source: string): void {
-        this.breakpoints.delete(source);
+    private clearBreakpoints(fileId: number | undefined): void {
+        if (fileId !== undefined) {
+            this.breakpoints.delete(fileId);
+        }
     }
 
     // Verify breakpoints in given file
     // source is assumed to be normaized
-    private verifyBreakpoints(source: string): void {
-        let file = path.basename(source);
-        let dir = path.dirname(source);
-
-        const bps = this.breakpoints.get(file);
+    private verifyBreakpoints(fileId: number): void {
+        const bps = this.breakpoints.get(fileId);
         if (bps) {
             //            this.loadSource(source);
             bps.forEach(bp => {
                 //                if (!bp.verified && bp.line < this.sourceLines.length) {
                 if (!bp.verified) {
+                    // we're only validating breakpoints from our source files
+                    // VS Code messes with case so compare files lower case
+                    // check if breakpoint is on a valid line
+                    let bpAddress = this.sourceMap.getRev(fileId, bp.line);
 
-                    // we're only validating breakpoints in files in our source directory
-                    if (dir.toLowerCase() === this.src.slice(0, -1).toLowerCase()) {
-                        // check if breakpoint is on a valid line
-                        let bpAddress = this.sourceMap.getRev(file, bp.line);
-
-                        // if so, set it as valid and update its address
-                        if (bpAddress) {
-                            bp.verified = true;
-                            bp.address = bpAddress;
-                            this.sendEvent(new BreakpointEvent('changed', { verified: bp.verified, id: bp.id } as DebugProtocol.Breakpoint));
-                        }
+                    // if so, set it as valid and update its address
+                    if (bpAddress) {
+                        bp.verified = true;
+                        bp.address = bpAddress;
+                        this.sendEvent(new BreakpointEvent('changed', { verified: bp.verified, id: bp.id } as DebugProtocol.Breakpoint));
                     }
                 }
             });
