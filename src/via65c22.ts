@@ -100,7 +100,7 @@ export class VIA {
 
                     //            if (!debugSet()) {
                     if (false) {
-                        let self = this;
+                        const self = this;
                         const readline = require('readline');
                         readline.emitKeypressEvents(process.stdin);
                         process.stdin.setRawMode(true);
@@ -154,9 +154,9 @@ export class VIA {
 
         obsMemory.subscribeToRead(this.VIA_SR, (address: number): number => {
             var byte: number = 0;
-            let char: string = getLastChar();
+            const char: string = getLastChar();
             if (char !== '') {
-                let utf8Encode = new TextEncoder();
+                const utf8Encode = new TextEncoder();
                 byte = utf8Encode.encode(char)[0];
                 if (this.escape) {
                     this.escape = false;
@@ -190,13 +190,13 @@ export class VIA {
     //}
 
     public SR_thread() {
-        let mpu = this.mpu;
+        const mpu = this.mpu;
         if((mpu.IRQ_pin === true) && ((mpu.p & mpu.INTERRUPT) === 0)) {
             if (kbhit) {
 //            if (false) {
                 mpu.memory[this.VIA_IFR] |= 0x04;
                 mpu.IRQ_pin = false;
             }
-        }    
+        }
     }
 }

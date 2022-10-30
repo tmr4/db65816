@@ -3,7 +3,7 @@ import { MPU65816 } from './mpu65816';
 import { ObsMemory } from './obsmemory';
 import { Interrupts } from './interrupts';
 //import { debugSet, send } from './childp';
-import * as fs from 'fs'
+import * as fs from 'fs';
 import { terminalWrite } from './terminal';
 
 export class ACIA {
@@ -116,7 +116,7 @@ export class ACIA {
                 return 0;
             }
             else {
-                let byte = this.bbuffer[this.bcount];
+                const byte = this.bbuffer[this.bcount];
                 this.bcount += 1;
                 this.status_reg &= 0x77; // clear Receiver Data Register Full flag (bit 3) status register
                 return byte;
@@ -127,7 +127,7 @@ export class ACIA {
             this.reset();
         });
         obsMemory.subscribeToRead(this.STATUSR, (address: number): number => {
-            let tmp = this.status_reg;
+            const tmp = this.status_reg;
             this.status_reg &= 0x7f; // clear interrupt flag (bit 7) in status register
             return tmp;
         });
@@ -140,7 +140,7 @@ export class ACIA {
     }
 
     public dataT_thread() {
-        let mpu =  this.mpu;
+        const mpu =  this.mpu;
         if(this.bcount < 1024) {
             if((mpu.IRQ_pin === true) && ((mpu.p & mpu.INTERRUPT) === 0)) {
                 mpu.IRQ_pin = false;

@@ -30,13 +30,13 @@ function toIEEE32(bytes: Uint8Array): string {
     let ieee32: string = '';
     if (bytes.length >= 8) {
         // convert the various pieces
-        let sign = (bytes[6] & 0x80) << 8;
-        let exph = bytes[4] >> 1;
-        let expl = bytes[4] & 1;
+        const sign = (bytes[6] & 0x80) << 8;
+        const exph = bytes[4] >> 1;
+        const expl = bytes[4] & 1;
 
-        let B4 = sign + exph;
-        let B3 = (expl << 7) + (bytes[3] & 0x7f); // drop hidden bit
-        let W1 = bytes[1] + (bytes[2] << 8) + (bytes[0] > 0x80 ? 1 : 0);
+        const B4 = sign + exph;
+        const B3 = (expl << 7) + (bytes[3] & 0x7f); // drop hidden bit
+        const W1 = bytes[1] + (bytes[2] << 8) + (bytes[0] > 0x80 ? 1 : 0);
 
         // combine these to ieee32
         ieee32 = ((B4 << 24) + (B3 << 16) + W1).toString(16);
@@ -80,4 +80,3 @@ export function toHexString(byteArray, size: number = 8, length: number = 47) {
         }).join(' ').slice(0, length);
     }
 }
-

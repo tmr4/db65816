@@ -42,8 +42,8 @@ export class Interrupts {
         // ineffective for this.  Threading took about 2.5 minutes
         // to start up and had very slow pasted input because threads
         // don't run concurrently in CPython and yielding with sleep
-        // wasn't fine tuned enough.  Cycle counts worked well for 
-        // startup but not for pastes as the time to processing input 
+        // wasn't fine tuned enough.  Cycle counts worked well for
+        // startup but not for pastes as the time to processing input
         // is variable and the circular input buffer is easily overflown.
         // Using the processor wait state is a good trade off.  It
         // gives a reasonable pasted input experience and only slightly
@@ -54,7 +54,7 @@ export class Interrupts {
         // 12 seconds.  It's about 17 seconds using waiting.  The difference
         // is processing the WAI instructions which are forced with this method
         // but never needed using a cycle count delay because at startup
-        // the input is already buffered (i.e, available without waiting). 
+        // the input is already buffered (i.e, available without waiting).
         // Cycle count delays also affected each interrupt, that is, the
         // VIA delay would affect the ACIA delay, even though keyboard
         // input isn't expected during start up.
@@ -71,4 +71,4 @@ export class Interrupts {
             }
         }
     }
-}         
+}

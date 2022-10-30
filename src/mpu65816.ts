@@ -19,9 +19,9 @@ export var disassemble: IDisasm[] = [];
 //       b { only valid in 8 bit mode (otherwise use high byte of a)
 //     x,y { represent both 8 and 16 bit registers. Note that processor flags bit 4 alone cannot indicate
 //          whether we are in 8 or 16 bit as during an interrupt this bit will be cleared and instructions
-//          would consider the registers as 16-bit even though they are 8-bit.  Thus code checks both 
+//          would consider the registers as 16-bit even though they are 8-bit.  Thus code checks both
 //          processor flags bit 4 and mode where appropriate.
-// 
+//
 export class MPU65816 {
     // processor characteristics
     public name: string;
@@ -83,7 +83,7 @@ export class MPU65816 {
     ADDRL_WIDTH = 24;
     ADDRL_FORMAT = "%05x";
 
-    public constructor(memory: Uint8Array | null, pc=0xfffc) {
+    public constructor(memory: Uint8Array | null, pc = 0xfffc) {
         // config
         this.name = '65C816';
         this.waiting = false;
@@ -151,7 +151,7 @@ export class MPU65816 {
                 this.irq();
                 this.IRQ_pin = true;
             }
-            let instructCode = this.memory[(this.pbr << this.ADDR_WIDTH) + this.pc];
+            const instructCode = this.memory[(this.pbr << this.ADDR_WIDTH) + this.pc];
             this.incPC();
             this.excycles = 0;
             this.addcycles = extracycles[instructCode] == 0 ? false : true;;
@@ -198,7 +198,7 @@ export class MPU65816 {
         this.stPushWord(this.pc);
 
         if(this.mode) {
-            // py65 has 
+            // py65 has
             //   this.p &= ~this.BREAK
             //   this.stPush(this.p | this.UNUSED)
             // but a cleared break is only pushed onto the stack
@@ -224,7 +224,7 @@ export class MPU65816 {
         this.stPushWord(this.pc);
 
         if(this.mode) {
-            // py65 has 
+            // py65 has
             //   this.p &= ~this.BREAK
             //   this.stPush(this.p | this.UNUSED)
             // but a cleared break is only pushed onto the stack
@@ -276,11 +276,11 @@ export class MPU65816 {
     }
 
     private OperandLong(): number {
-        let epc = this.OperandAddr();
-        return (this.ByteAt(epc+2) << this.ADDR_WIDTH) + this.WordAt(epc);
+        const epc = this.OperandAddr();
+        return (this.ByteAt(epc + 2) << this.ADDR_WIDTH) + this.WordAt(epc);
     }
 
-    private incPC(inc: number=1): void {
+    private incPC(inc: number = 1): void {
         // pc must remain within current program bank
         this.pc = (this.pc + inc) & this.addrMask;
     }
@@ -319,7 +319,7 @@ export class MPU65816 {
 
     private isCLR(x: number) {
         return !(this.p & x); // but not this
-    }        
+    }
     // stack related helpers
 
     private stPush(z: number): void {
@@ -388,14 +388,14 @@ export class MPU65816 {
     // *****************************************************************************
     // *****************************************************************************
     //   Page and Bank Boundary Wrapping
-    // 
+    //
     //   Page Boundary Wrapping
     //   From { http {//6502.org/tutorials/65c816opcodes.html#5.1
     //   Page boundary wrapping only occurs in emulation mode, and only for 65C02 instructions and addressing
     //   modes.  When in emulation mode, page boundary wrapping only occurs in the following situations {
     //       A. The direct page wraps at page boundary only when dpr low byte is 0
     //       B. The stack wraps at the page 1 boundary
-    // 
+    //
     //   Bank Boundary Wrapping
     //   From { http {//6502.org/tutorials/65c816opcodes.html#5.2
     //   Bank boundary wrapping occurs in both native and emulation mode.
@@ -403,13 +403,13 @@ export class MPU65816 {
     //       A. The direct page
     //       B. The stack
     //       C. Absolute Indirect and Absolute Indirect Long addressing modes (only apply to JMP)
-    // 
+    //
     //   The following are confined to bank K and thus wrap at the bank K boundary {
     //       A. Absolute Indirect Indexed X addressing mode (only applies to JMP and JSR)
-    //       B. The Program Counter 
-    // 
+    //       B. The Program Counter
+    //
     //   For the MVN and MVP instructions, the source and destination banks wraps at their bank boundaries.
-    // 
+    //
     //   Otherwise, wrapping does not occur at bank boundaries.
 
     // *** TODO {
@@ -418,7 +418,7 @@ export class MPU65816 {
     // emulation mode when dpr low byte is 0
     // ***
 
-    // http {//www.6502.org/tutorials/65c816opcodes.html#5.7 through 
+    // http {//www.6502.org/tutorials/65c816opcodes.html#5.7 through
     // http {//www.6502.org/tutorials/65c816opcodes.html#5.9
     // discuss wrapping at $00ffff.  Since address modes simply return an
     // address the individual operations will need to handle any wrapping
@@ -432,11 +432,11 @@ export class MPU65816 {
     // When drp starts on a page boundary, the effective address is formed
     // by concatenating the dpr high byte to the direct page offset rather
     //  than simply adding drp and the offset, or {
-    // 
+    //
     //   (this.dpr >> this.BYTE_WIDTH) + this.ByteAt(epc)
     // vs
     //   this.dpr + this.ByteAt(epc)
-    // 
+    //
     // See 65816 Programming Manual, pg 156, which states that this save 1 cycle
 
 
@@ -447,10 +447,10 @@ export class MPU65816 {
         //                 0x01ff => 0x0100       +   0x0200 =>  0x00  = 0x0100
         //                 0x0155 => 0x0100       +   0x0156 =>  0x56  = 0x0156
 //        wrap = lambda x { (x & this.addrHighMask) + ((x + 1) & this.byteMask)
-        //     get bytes at 0x01ff   and         0x0100     
-        //     get bytes at 0x0155   and         0x0156     
+        //     get bytes at 0x01ff   and         0x0100
+        //     get bytes at 0x0155   and         0x0156
 //        return this.ByteAt(addr) + (this.ByteAt(wrap(addr)) << this.BYTE_WIDTH)
-        if(addr+1 > (1 << this.BYTE_WIDTH)) {
+        if(addr + 1 > (1 << this.BYTE_WIDTH)) {
             return this.ByteAt(addr) + (this.ByteAt(0) << this.BYTE_WIDTH);
         }
         else {
@@ -459,7 +459,7 @@ export class MPU65816 {
     }
 
     // new 65816 address modes and instructions don't page boundary wrap
-    private dpWrap(offset: number, pageWrap: boolean=true): number {
+    private dpWrap(offset: number, pageWrap: boolean = true): number {
         // direct page wraps at {
         if(pageWrap && this.mode && ((this.dpr & this.byteMask) == 0)) {
             // page boundary in emulation mode when dpr low byte = 0
@@ -470,7 +470,7 @@ export class MPU65816 {
             return (this.dpr + offset) & this.addrMask;
         }
     }
-    
+
     // returns bank 0 word at dpaddr, wrapping at page or bank 0 boundary as appropriate
     private dpWrapAt(dpaddr: number): number {
         // direct page indirect address wraps at {
@@ -518,7 +518,7 @@ export class MPU65816 {
     //    Stack Relative Indirect Indexed Y         LDA (9,S),Y
 
     // new 65816 address modes don't page wrap
-    // I assume that Direct Page Indirect is new in name only, it's the 6502's zero page 
+    // I assume that Direct Page Indirect is new in name only, it's the 6502's zero page
     // Perhaps this is a reference to the limitations of page wrapping (if(so, why not the others)
     // *** TODO { verify this ***
 
@@ -527,9 +527,9 @@ export class MPU65816 {
     }
 
     private AbsoluteXAddr(): number { // "abx" (17 opcodes)
-        let tmp = this.OperandWord();
-        let a1 = (this.dbr << this.ADDR_WIDTH) + tmp;
-        let a2 = a1 + this.x;
+        const tmp = this.OperandWord();
+        const a1 = (this.dbr << this.ADDR_WIDTH) + tmp;
+        const a2 = a1 + this.x;
         if(this.addcycles) {
             if((a1 & this.addrBankMask) != (a2 & this.addrBankMask)) {
                 this.excycles += 1;
@@ -539,9 +539,9 @@ export class MPU65816 {
     }
 
     private AbsoluteYAddr(): number { // "aby" (9 opcodes)
-        let addr = this.OperandWord();
-        let a1 = (this.dbr << this.ADDR_WIDTH) + addr;
-        let a2 = a1 + this.y;
+        const addr = this.OperandWord();
+        const a1 = (this.dbr << this.ADDR_WIDTH) + addr;
+        const a2 = a1 + this.y;
         if(this.addcycles) {
             if((a1 & this.addrBankMask) != (a2 & this.addrBankMask)) {
                 this.excycles += 1;
@@ -555,7 +555,7 @@ export class MPU65816 {
     // but operand indirection wraps at bank 0 boundary
 
     private AbsoluteIndirectXAddr(): number { // "aix" (2 opcodes)
-        let pb_addr = (this.pbr << this.ADDR_WIDTH) + this.OperandWord() + this.x;
+        const pb_addr = (this.pbr << this.ADDR_WIDTH) + this.OperandWord() + this.x;
 
         // program bank addr indirection wraps at bank boundary
         if((pb_addr & this.addrMask) == 0xffff) {
@@ -565,7 +565,7 @@ export class MPU65816 {
             return this.WordAt(pb_addr);
         }
     }
-        
+
     // Absolute Indirect Long "ail" (1 opcode) modeled directly in JMP
     // new 65816 address modes don't wrap
     // but operand indirection wraps at bank 0 boundary
@@ -578,7 +578,7 @@ export class MPU65816 {
 
     // new 65816 address modes don't wrap
     private AbsoluteLongXAddr(): number { // new to 65816, "alx" (8 opcodes)
-        // *** TODO { add 1 cycle if(mode = 0 (do it either here or in instruction) generally it 
+        // *** TODO { add 1 cycle if(mode = 0 (do it either here or in instruction) generally it
         // seems that it's done in address mode private ***
         return this.OperandLong() + this.x;
     }
@@ -601,14 +601,14 @@ export class MPU65816 {
     }
 
     private DirectPageIndirectXAddr(): number { // "dix" (8 opcodes)
-        let dpaddr = this.dpWrap(this.OperandByte() + this.x);
-        let inaddr = this.dpWrapAt(dpaddr);
+        const dpaddr = this.dpWrap(this.OperandByte() + this.x);
+        const inaddr = this.dpWrapAt(dpaddr);
         return (this.dbr << this.ADDR_WIDTH) + inaddr;
     }
 
     private DirectPageIndirectAddr(): number { // "dpi" (8 opcodes)
-        let dpaddr = this.dpWrap(this.OperandByte());
-        let inaddr = this.dpWrapAt(dpaddr);;
+        const dpaddr = this.dpWrap(this.OperandByte());
+        const inaddr = this.dpWrapAt(dpaddr);;
         return (this.dbr << this.ADDR_WIDTH) + inaddr;
     }
 
@@ -616,7 +616,7 @@ export class MPU65816 {
     private DirectPageIndirectLongAddr(): number { // new to 65816, "dil" (8 opcodes)
         var bank: number, inaddr: number;
 
-        let dpaddr = this.dpWrap(this.OperandByte(), false);
+        const dpaddr = this.dpWrap(this.OperandByte(), false);
 
         // indirect adddress wraps at bank 0 boundary
         if(dpaddr == 0xffff) {
@@ -637,9 +637,9 @@ export class MPU65816 {
 
     private DirectPageIndirectYAddr(): number { // "diy" (8 opcodes)
         // *** TODO { check on excycles ***
-        let dpaddr = this.dpWrap(this.OperandByte());
-        let inaddr = this.dpWrapAt(dpaddr);
-        let efaddr = (this.dbr << this.ADDR_WIDTH) + inaddr + this.y;
+        const dpaddr = this.dpWrap(this.OperandByte());
+        const inaddr = this.dpWrapAt(dpaddr);
+        const efaddr = (this.dbr << this.ADDR_WIDTH) + inaddr + this.y;
         if(this.addcycles) {
             if((inaddr & this.addrBankMask) != (efaddr & this.addrBankMask)) {
                 this.excycles += 1;
@@ -651,15 +651,15 @@ export class MPU65816 {
     // new 65816 address modes don't page boundary wrap
     private DirectPageIndirectLongYAddr(): number { // new to 65816, "dly" (8 opcodes)
         // *** TODO { check on excycles ***
-        let inaddr = this.DirectPageIndirectLongAddr();
-        let efaddr = inaddr + this.y;
+        const inaddr = this.DirectPageIndirectLongAddr();
+        const efaddr = inaddr + this.y;
 
         if(this.addcycles) {
             if((inaddr & this.addrBankMask) != (efaddr & this.addrBankMask)) {
                 this.excycles += 1;
             }
         }
-                
+
         return efaddr;
     }
 
@@ -673,7 +673,7 @@ export class MPU65816 {
         var addr: number;
 
         this.excycles += 1;
-        let offset = this.OperandByte();
+        const offset = this.OperandByte();
         this.incPC();
 
         if(offset & this.NEGATIVE) {
@@ -696,7 +696,7 @@ export class MPU65816 {
         var addr: number;
 
         // this.excycles += 1
-        let offset = this.OperandWord();
+        const offset = this.OperandWord();
         this.incPC();
 
         if((offset >> this.BYTE_WIDTH) & this.NEGATIVE) {
@@ -730,8 +730,8 @@ export class MPU65816 {
 
     // new 65816 address modes don't wrap
     private StackRelIndirectYAddr(): number { // "siy" (8 opcode)
-        let spaddr = (this.sp + this.OperandByte()) & this.addrMask;
-        let inaddr = this.WordAt(spaddr);
+        const spaddr = (this.sp + this.OperandByte()) & this.addrMask;
+        const inaddr = this.WordAt(spaddr);
         // *** TODO { any extra cycles? ***
         return (this.dbr << this.ADDR_WIDTH) + inaddr + this.y;
     }
@@ -756,13 +756,13 @@ export class MPU65816 {
             // Includes proposed fix from {
             // https {//github.com/mnaberez/py65/pull/55/commits/666cd9cd99484f769b563218214433d37faa1d87
             // as discussed at { https {//github.com/mnaberez/py65/issues/33
-            // 
-            // This now passed 8-bit BCD tests from { 
+            //
+            // This now passed 8-bit BCD tests from {
             // http {//6502.org/tutorials/decimal_mode.html#B
             // that I've modeled at { C {\Users\tmrob\Documents\Projects\65C816\Assembler\decimal
-            // 
+            //
             //       C {\Users\tmrob\Documents\Projects\65C816\Assembler\decimal>bcd
-            //       
+            //
             //       C {\Users\tmrob\Documents\Projects\65C816\Assembler\decimal>py65816mon -m 65c816 -r bcd.bin -i fff0 -o fff1
             //       Wrote +65536 bytes from $0000 to $ffff
             //       -------------------------------------
@@ -773,14 +773,14 @@ export class MPU65816 {
             //       -------------------------------------
             //       Emulation  ADC    01-10111   PASS
             //       Emulation  SBC    00-10111   PASS
-            //       
+            //
             //       -------------------------------------
             //       BCD,8
             //       Mode     | Test | NVMXDIZC | Result |
             //       -------------------------------------
             //       Native-8   ADC    01110111   PASS
             //       Native-8   SBC    00110111   PASS
-            //       
+            //
 
             // 8-bit
             // *** TODO { should try to consolidate these ***
@@ -810,7 +810,7 @@ export class MPU65816 {
                 nibble1 = (nibble1 + adjust1) & 0xf;
 
                 // Update result for use in setting flags below
-                let aluresult = (nibble1 << 4) + nibble0;
+                const aluresult = (nibble1 << 4) + nibble0;
 
                 this.p &= ~(this.CARRY | this.OVERFLOW | this.NEGATIVE | this.ZERO);
                 if(aluresult == 0) {
@@ -885,13 +885,13 @@ export class MPU65816 {
                 nibble3 = (nibble3 + adjust3) & 0xf;
 
                 // Update result for use in setting flags below
-                let aluresult = (nibble3 << 12) + (nibble2 << 8) + (nibble1 << 4) + nibble0;
+                const aluresult = (nibble3 << 12) + (nibble2 << 8) + (nibble1 << 4) + nibble0;
 //                this.memory[0xfff1] = nibble3 + 0x30
 //                this.memory[0xfff1] = nibble2 + 0x30
 //                this.memory[0xfff1] = nibble1 + 0x30
 //                this.memory[0xfff1] = nibble0 + 0x30
 //                this.memory[0xfff1] = 0x20
-                
+
                 this.p &= ~(this.CARRY | this.OVERFLOW | this.NEGATIVE | this.ZERO);
                 if(aluresult == 0) {
                     this.p |= this.ZERO;
@@ -923,7 +923,7 @@ export class MPU65816 {
             else {
                 tmp = 0;
             }
-            let result = data + this.a + tmp;
+            const result = data + this.a + tmp;
             this.p &= ~(this.CARRY | this.OVERFLOW | this.NEGATIVE | this.ZERO);
 
             if(this.p & this.MS) {
@@ -976,8 +976,8 @@ export class MPU65816 {
     }
 
     private opASL(x: (() => number) | null) {
-        var tbyte: number, addr: number=0;
-        
+        var tbyte: number, addr: number = 0;
+
         if(x == null) {
             tbyte = this.a;
         }
@@ -1027,7 +1027,7 @@ export class MPU65816 {
             }
             else {
                 this.memory[addr] = tbyte & this.byteMask;
-                this.memory[addr+1] = tbyte >> this.BYTE_WIDTH;
+                this.memory[addr + 1] = tbyte >> this.BYTE_WIDTH;
             }
         }
     }
@@ -1041,7 +1041,7 @@ export class MPU65816 {
         else {
             tbyte = this.WordAt(x.call(this));
         }
-            
+
         this.p &= ~(this.ZERO | this.NEGATIVE | this.OVERFLOW);
         if((this.a & tbyte) == 0) {
             this.p |= this.ZERO;
@@ -1091,7 +1091,7 @@ export class MPU65816 {
     }
 
     private opDECR(x: (() => number) | null) {
-        var tbyte: number, addr: number=0;
+        var tbyte: number, addr: number = 0;
 
         if(x == null) {
             tbyte = this.a;
@@ -1135,7 +1135,7 @@ export class MPU65816 {
             }
             else {
                 this.memory[addr] = tbyte & this.byteMask;
-                this.memory[addr+1] = (tbyte >> this.BYTE_WIDTH);
+                this.memory[addr + 1] = (tbyte >> this.BYTE_WIDTH);
             }
         }
     }
@@ -1152,7 +1152,7 @@ export class MPU65816 {
     }
 
     private opINCR(x: (() => number) | null) {
-        var tbyte: number, addr: number=0;
+        var tbyte: number, addr: number = 0;
 
         if(x == null) {
             tbyte = this.a;
@@ -1195,7 +1195,7 @@ export class MPU65816 {
             }
             else {
                 this.memory[addr] = tbyte & this.byteMask;
-                this.memory[addr+1] = (tbyte >> this.BYTE_WIDTH);
+                this.memory[addr + 1] = (tbyte >> this.BYTE_WIDTH);
             }
         }
     }
@@ -1234,7 +1234,7 @@ export class MPU65816 {
     }
 
     private opLSR(x: (() => number) | null) {
-        var tbyte: number, addr: number=0;
+        var tbyte: number, addr: number = 0;
 
         if(x == null) {
             tbyte = this.a;
@@ -1269,7 +1269,7 @@ export class MPU65816 {
             }
             else {
                 this.memory[addr] = tbyte & this.byteMask;
-                this.memory[addr+1] = tbyte >> this.BYTE_WIDTH;
+                this.memory[addr + 1] = tbyte >> this.BYTE_WIDTH;
             }
         }
     }
@@ -1279,8 +1279,8 @@ export class MPU65816 {
         // If inc = 1 the addresses are the start
         // If inc = -1 the addresses are the end
         // Operand lsb is dest dbr, msb is source
-        let dbr = this.OperandByte() << this.ADDR_WIDTH;
-        let sbr = (this.OperandWord() >> this.BYTE_WIDTH) << this.ADDR_WIDTH;
+        const dbr = this.OperandByte() << this.ADDR_WIDTH;
+        const sbr = (this.OperandWord() >> this.BYTE_WIDTH) << this.ADDR_WIDTH;
         this.memory[dbr + this.y] = this.memory[sbr + this.x];
         this.x += inc;
         this.y += inc;
@@ -1294,7 +1294,7 @@ export class MPU65816 {
         }
 
         if(this.p & this.MS) {
-            let c = (this.b << this.BYTE_WIDTH) + this.a - 1;
+            const c = (this.b << this.BYTE_WIDTH) + this.a - 1;
             this.a = c & this.byteMask;
             this.b = (c >> this.BYTE_WIDTH) & this.byteMask;
         }
@@ -1316,7 +1316,7 @@ export class MPU65816 {
     }
 
     private opROL(x: (() => number) | null) {
-        var tbyte: number, addr: number=0;
+        var tbyte: number, addr: number = 0;
 
         if(x == null) {
             tbyte = this.a;
@@ -1383,13 +1383,13 @@ export class MPU65816 {
             }
             else {
                 this.memory[addr] = tbyte & this.byteMask;
-                this.memory[addr+1] = tbyte >> this.BYTE_WIDTH;
+                this.memory[addr + 1] = tbyte >> this.BYTE_WIDTH;
             }
         }
     }
 
     private opROR(x: (() => number) | null) {
-        var tbyte: number, addr: number=0;
+        var tbyte: number, addr: number = 0;
 
         if(x == null) {
             tbyte = this.a;
@@ -1441,7 +1441,7 @@ export class MPU65816 {
             }
             else {
                 this.memory[addr] = tbyte & this.byteMask;
-                this.memory[addr+1] = tbyte >> this.BYTE_WIDTH;
+                this.memory[addr + 1] = tbyte >> this.BYTE_WIDTH;
             }
         }
     }
@@ -1459,13 +1459,13 @@ export class MPU65816 {
         if(this.p & this.DECIMAL) {
             // https {//github.com/mnaberez/py65/pull/55/commits/666cd9cd99484f769b563218214433d37faa1d87
             // as discussed at { https {//github.com/mnaberez/py65/issues/33
-            // 
-            // This now passed 8-bit BCD tests from { 
+            //
+            // This now passed 8-bit BCD tests from {
             // http {//6502.org/tutorials/decimal_mode.html#B
             // that I've modeled at { C {\Users\tmrob\Documents\Projects\65C816\Assembler\decimal
-            // 
+            //
             //       C {\Users\tmrob\Documents\Projects\65C816\Assembler\decimal>bcd
-            //       
+            //
             //       C {\Users\tmrob\Documents\Projects\65C816\Assembler\decimal>py65816mon -m 65c816 -r bcd.bin -i fff0 -o fff1
             //       Wrote +65536 bytes from $0000 to $ffff
             //       -------------------------------------
@@ -1476,14 +1476,14 @@ export class MPU65816 {
             //       -------------------------------------
             //       Emulation  ADC    01-10111   PASS
             //       Emulation  SBC    00-10111   PASS
-            //       
+            //
             //       -------------------------------------
             //       BCD,8
             //       Mode     | Test | NVMXDIZC | Result |
             //       -------------------------------------
             //       Native-8   ADC    01110111   PASS
             //       Native-8   SBC    00110111   PASS
-            //       
+            //
 
             // 8-bit
             // *** TODO { should try to consolidate these ***
@@ -1583,8 +1583,8 @@ export class MPU65816 {
                 if(aluresult > this.addrMask) {
                     decimalcarry = 1;
                 }
-                let aluresultL = aluresult & this.byteMask;
-                let aluresultH = (aluresult >> this.BYTE_WIDTH) & this.byteMask;
+                const aluresultL = aluresult & this.byteMask;
+                const aluresultH = (aluresult >> this.BYTE_WIDTH) & this.byteMask;
 
                 // but the final result will be adjusted
                 nibble0 = (aluresultL + adjust0) & 0xf;
@@ -1650,19 +1650,19 @@ export class MPU65816 {
     }
 
     private opSTA(x: () => number) {
-        let addr = x.call(this);
+        const addr = x.call(this);
 
         if(this.p & this.MS) {
             this.memory[addr] = this.a & this.byteMask;
         }
         else {
             this.memory[addr] = this.a & this.byteMask;
-            this.memory[addr+1] = (this.a >> this.BYTE_WIDTH) & this.byteMask;
+            this.memory[addr + 1] = (this.a >> this.BYTE_WIDTH) & this.byteMask;
         }
     }
 
     private opSTX(y: () => number) {
-        let addr = y.call(this);
+        const addr = y.call(this);
 
         // need to be explicit with mode as bit 4 can be 0 in mode 1 with an interrupt
         if((this.p & this.IRS) || this.mode) {
@@ -1670,12 +1670,12 @@ export class MPU65816 {
         }
         else {
             this.memory[addr] = this.x & this.byteMask;
-            this.memory[addr+1] = (this.x >> this.BYTE_WIDTH) & this.byteMask;
+            this.memory[addr + 1] = (this.x >> this.BYTE_WIDTH) & this.byteMask;
         }
     }
 
     private opSTY(x: () => number) {
-        let addr = x.call(this);
+        const addr = x.call(this);
 
         // need to be explicit with mode as bit 4 can be 0 in mode 1 with an interrupt
         if((this.p & this.IRS) || this.mode) {
@@ -1683,31 +1683,31 @@ export class MPU65816 {
         }
         else {
             this.memory[addr] = this.y & this.byteMask;
-            this.memory[addr+1] = (this.y >> this.BYTE_WIDTH) & this.byteMask;
+            this.memory[addr + 1] = (this.y >> this.BYTE_WIDTH) & this.byteMask;
         }
     }
 
     private opSTZ(x: () => number) {
-        let addr = x.call(this);
+        const addr = x.call(this);
 
         if(this.p & this.MS) {
             this.memory[addr] = 0x00;
         }
         else {
             this.memory[addr] = 0x00;
-            this.memory[addr+1] = 0x00;
+            this.memory[addr + 1] = 0x00;
         }
     }
 
     private opTSB(x: () => number) {
         var m, r, z;
-        let addr = x.call(this);
+        const addr = x.call(this);
 
         if(this.p & this.MS) {
             m = this.memory[addr];
         }
         else {
-            m = (this.memory[addr+1] << this.BYTE_WIDTH) + this.memory[addr];
+            m = (this.memory[addr + 1] << this.BYTE_WIDTH) + this.memory[addr];
         }
 
         this.p &= ~this.ZERO;
@@ -1722,19 +1722,19 @@ export class MPU65816 {
         }
         else {
             this.memory[addr] = r & this.byteMask;
-            this.memory[addr+1] = (r >> this.BYTE_WIDTH) & this.byteMask;
+            this.memory[addr + 1] = (r >> this.BYTE_WIDTH) & this.byteMask;
         }
     }
 
     private opTRB(x: () => number) {
         var m, r, z;
-        let addr = x.call(this);
+        const addr = x.call(this);
 
         if(this.p & this.MS) {
             m = this.memory[addr];
         }
         else {
-            m = (this.memory[addr+1] << this.BYTE_WIDTH) + this.memory[addr];
+            m = (this.memory[addr + 1] << this.BYTE_WIDTH) + this.memory[addr];
         }
 
         this.p &= ~this.ZERO;
@@ -1749,7 +1749,7 @@ export class MPU65816 {
         }
         else {
             this.memory[addr] = r & this.byteMask;
-            this.memory[addr+1] = (r >> this.BYTE_WIDTH) & this.byteMask;
+            this.memory[addr + 1] = (r >> this.BYTE_WIDTH) & this.byteMask;
         }
     }
 
@@ -1767,7 +1767,7 @@ export class MPU65816 {
 
         // pc has already been increased one
         // increment for optional signature byte
-        let pc = (this.pc + 1) & this.addrMask;
+        const pc = (this.pc + 1) & this.addrMask;
         this.stPushWord(pc);
 
         if(this.mode) {
@@ -1806,7 +1806,7 @@ export class MPU65816 {
 
         // pc has already been increased one
         // increment for optional signature byte
-        let pc = (this.pc + 1) & this.addrMask;
+        const pc = (this.pc + 1) & this.addrMask;
         this.stPushWord(pc);
 
         this.stPush(this.p);
@@ -1862,7 +1862,7 @@ export class MPU65816 {
     @instruction("ORA", "imm", 2)
     private inst_0x09() {
         this.opORA(this.ImmediateAddr);
-        this.incPC(2 - ((this.p & this.MS)>>5));
+        this.incPC(2 - ((this.p & this.MS) >> 5));
     }
 
     @instruction("ASL", "acc", 2)
@@ -2021,7 +2021,7 @@ export class MPU65816 {
     private inst_0x22() {
         this.stPush(this.pbr);
         this.stPushWord((this.pc + 2) & this.addrMask);
-        let pbr = this.ByteAt((this.pbr << this.ADDR_WIDTH) + this.pc + 2);
+        const pbr = this.ByteAt((this.pbr << this.ADDR_WIDTH) + this.pc + 2);
         this.pc = this.OperandWord();
         this.pbr = pbr;
     }
@@ -2058,7 +2058,7 @@ export class MPU65816 {
 
     @instruction("PLP", "stk", 4)
     private inst_0x28() {
-        let p = this.stPop();
+        const p = this.stPop();
         if(this.mode) {
             // *** TODO:
             // the 65816 Programming manual has the this can change the BREAK flag
@@ -2092,7 +2092,7 @@ export class MPU65816 {
     @instruction("AND", "imm", 2)
     private inst_0x29() {
         this.opAND(this.ImmediateAddr);
-        this.incPC(2 - ((this.p & this.MS)>>5));
+        this.incPC(2 - ((this.p & this.MS) >> 5));
     }
 
     @instruction("ROL", "acc", 2)
@@ -2296,7 +2296,7 @@ export class MPU65816 {
         // MVP handles interrupts by not incrementing pc until C == $ffff
         // thus like the 65816 it completes the current byte transfer before
         // breaking for the interrupt and then returns
-        // X is source, Y is dest ending addresses; A is bytes to move - 1 
+        // X is source, Y is dest ending addresses; A is bytes to move - 1
         // Operand lsb is dest dbr, msb is source
         var c;
 
@@ -2348,7 +2348,7 @@ export class MPU65816 {
     @instruction("EOR", "imm", 2)
     private inst_0x49() {
         this.opEOR(this.ImmediateAddr);
-        this.incPC(2 - ((this.p & this.MS)>>5));
+        this.incPC(2 - ((this.p & this.MS) >> 5));
     }
 
     @instruction("LSR", "acc", 2)
@@ -2412,7 +2412,7 @@ export class MPU65816 {
         // MVN handles interrupts by not incrementing pc until A == $ffff
         // thus like the 65816 it completes the current byte transfer before
         // breaking for the interrupt and then returns
-        // X is source, Y is dest starting addresses; A is bytes to move - 1 
+        // X is source, Y is dest starting addresses; A is bytes to move - 1
         // Operand lsb is dest dbr, msb is source
         var c;
 
@@ -2488,7 +2488,7 @@ export class MPU65816 {
 
     @instruction("JML", "abl", 4)  // new to 65816
     private inst_0x5c() {
-        let pbr = this.ByteAt((this.pbr << this.ADDR_WIDTH) + this.pc + 2);
+        const pbr = this.ByteAt((this.pbr << this.ADDR_WIDTH) + this.pc + 2);
         this.pc = this.OperandWord();
         this.pbr = pbr;
     }
@@ -2574,7 +2574,7 @@ export class MPU65816 {
     @instruction("ADC", "imm", 2)
     private inst_0x69() {
         this.opADC(this.ImmediateAddr);
-        this.incPC(2 - ((this.p & this.MS)>>5));
+        this.incPC(2 - ((this.p & this.MS) >> 5));
     }
 
     @instruction("ROR", "acc", 2)
@@ -2592,7 +2592,7 @@ export class MPU65816 {
     @instruction("JMP", "abi", 5)
     private inst_0x6c() {
         // 65C02 and 65816 don't have the 6502 page wrap bug
-        let operand = this.OperandWord();
+        const operand = this.OperandWord();
 
         // operand indirection wraps at bank 0 boundary
         if(operand == 0xffff) {
@@ -2807,7 +2807,7 @@ export class MPU65816 {
         if((this.a & tbyte) == 0) {
             this.p |= this.ZERO;
         }
-        this.incPC(2 - ((this.p & this.MS)>>5));
+        this.incPC(2 - ((this.p & this.MS) >> 5));
     }
 
     @instruction("TXA", "imp", 2)
@@ -2990,7 +2990,7 @@ export class MPU65816 {
     @instruction("LDY", "imm", 2)
     private inst_0xa0() {
         this.opLDY(this.ImmediateAddr);
-        this.incPC(2 - (((this.p & this.IRS)>>4) || this.mode));
+        this.incPC(2 - (((this.p & this.IRS) >> 4) || this.mode));
     }
 
     @instruction("LDA", "dix", 6)
@@ -3002,7 +3002,7 @@ export class MPU65816 {
     @instruction("LDX", "imm", 2)
     private inst_0xa2() {
         this.opLDX(this.ImmediateAddr);
-        this.incPC(2 - (((this.p & this.IRS)>>4) || this.mode));
+        this.incPC(2 - (((this.p & this.IRS) >> 4) || this.mode));
     }
 
     @instruction("LDA", "str", 4) // new to 65816
@@ -3063,7 +3063,7 @@ export class MPU65816 {
     @instruction("LDA", "imm", 2)
     private inst_0xa9() {
         this.opLDA(this.ImmediateAddr);
-        this.incPC(2 - ((this.p & this.MS)>>5));
+        this.incPC(2 - ((this.p & this.MS) >> 5));
     }
 
     @instruction("TAX", "imp", 2)
@@ -3228,7 +3228,7 @@ export class MPU65816 {
     @instruction("CPY", "imm", 2)
     private inst_0xc0() {
         this.opCMP(this.ImmediateAddr, this.y, this.IRS);
-        this.incPC(2 - (((this.p & this.IRS)>>4) || this.mode));
+        this.incPC(2 - (((this.p & this.IRS) >> 4) || this.mode));
     }
 
     @instruction("CMP", "dix", 6)
@@ -3239,7 +3239,7 @@ export class MPU65816 {
 
     @instruction("REP", "imm", 3) // new to 65816
     private inst_0xc2() {
-        let operand = this.OperandByte();
+        const operand = this.OperandByte();
         let mask = this.CARRY;
 
         while(mask) {
@@ -3319,7 +3319,7 @@ export class MPU65816 {
     @instruction("CMP", "imm", 2)
     private inst_0xc9() {
         this.opCMP(this.ImmediateAddr, this.a, this.MS);
-        this.incPC(2 - ((this.p & this.MS)>>5));
+        this.incPC(2 - ((this.p & this.MS) >> 5));
     }
 
     @instruction("DEX", "imp", 2)
@@ -3389,7 +3389,7 @@ export class MPU65816 {
 
     @instruction("PEI", "ski", 6) // new to 65816
     private inst_0xd4() {
-        let addr = this.WordAt(this.dpr + this.OperandByte()); // in Bank 0
+        const addr = this.WordAt(this.dpr + this.OperandByte()); // in Bank 0
         this.stPushWord(addr);
         this.incPC();
     }
@@ -3444,7 +3444,7 @@ export class MPU65816 {
     @instruction("JML", "ail", 6)  // new to 65816
     private inst_0xdc() {
         var pbr;
-        let operand = this.OperandWord();
+        const operand = this.OperandWord();
 
         // operand indirection wraps at bank 0 boundary
         if(operand == 0xffff) {
@@ -3484,7 +3484,7 @@ export class MPU65816 {
     @instruction("CPX", "imm", 2)
     private inst_0xe0() {
         this.opCMP(this.ImmediateAddr, this.x, this.IRS);
-        this.incPC(2 - (((this.p & this.IRS)>>4) || this.mode));
+        this.incPC(2 - (((this.p & this.IRS) >> 4) || this.mode));
     }
 
     @instruction("SBC", "dix", 6)
@@ -3495,7 +3495,7 @@ export class MPU65816 {
 
     @instruction("SEP", "imm", 3) // new to 65816
     private inst_0xe2() {
-        let operand = this.OperandByte();
+        const operand = this.OperandByte();
         let mask = this.CARRY;
         while(mask) {
             // can't change BREAK or UNUSED flags in emulation mode
@@ -3563,7 +3563,7 @@ export class MPU65816 {
     @instruction("SBC", "imm", 2)
     private inst_0xe9() {
         this.opSBC(this.ImmediateAddr);
-        this.incPC(2 - ((this.p & this.MS)>>5));
+        this.incPC(2 - ((this.p & this.MS) >> 5));
     }
 
     @instruction("NOP", "imp", 2)
@@ -3574,7 +3574,7 @@ export class MPU65816 {
     @instruction("XBA", "imp", 3) // new to 65816
     private inst_0xeb() {
         var b;
-        let a = this.a & this.byteMask;
+        const a = this.a & this.byteMask;
 
         if(this.p & this.MS) { // 8 bit
             this.a = this.b;
@@ -3687,8 +3687,8 @@ export class MPU65816 {
 
     @instruction("XCE", "imp", 2) // new to 65816
     private inst_0xfb() {
-        // 65816 Programming Manual, pg 423, describes these action as 
-        // only happening when actually switching modes. 
+        // 65816 Programming Manual, pg 423, describes these action as
+        // only happening when actually switching modes.
         // I verified on the W65C265SXB that the registers, M and X don't
         // change if XCE is executed called in native mode with carry cleared
         // (native => native).  I couldn't test emulation => emulation

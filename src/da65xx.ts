@@ -166,7 +166,7 @@ export class Debug65xxSession extends LoggingDebugSession {
                 this.sendEvent(new StoppedEvent('pause', Debug65xxSession.threadID));
             }
             else {
-                let se = new StoppedEvent('pause', Debug65xxSession.threadID);
+                const se = new StoppedEvent('pause', Debug65xxSession.threadID);
                 (se as DebugProtocol.StoppedEvent).body.description = 'Paused, waiting for input';
                 this.sendEvent(se);
             }
@@ -322,7 +322,7 @@ export class Debug65xxSession extends LoggingDebugSession {
     }
 
     protected disconnectRequest(response: DebugProtocol.DisconnectResponse, args: DebugProtocol.DisconnectArguments, request?: DebugProtocol.Request): void {
-        console.log(`disconnectRequest suspend: ${args.suspendDebuggee}, terminate: ${args.terminateDebuggee}`);
+        //console.log(`disconnectRequest suspend: ${args.suspendDebuggee}, terminate: ${args.terminateDebuggee}`);
         this.ee65xx.end();
     }
 
@@ -354,14 +354,14 @@ export class Debug65xxSession extends LoggingDebugSession {
         }
 
         if (args.args) {
-            let args0 = args.args[0];
+            const args0 = args.args[0];
 
             sbin = args0.sbin;
             fbin = args0.fbin;
             acia = parseInt(args0.acia);
             via = parseInt(args0.via);
 
-            let extension = path.extname(args0.sbin);
+            const extension = path.extname(args0.sbin);
             binBase = path.basename(args0.sbin, extension);
 
             if (args0.src) {
@@ -387,8 +387,8 @@ export class Debug65xxSession extends LoggingDebugSession {
 
         // start 65816 execution engine
         this.ee65xx.start(sbin, fbin, acia, via, !!args.stopOnEntry, !args.noDebug);
-        let mpu = this.ee65xx.mpu;
-        let memory = this.ee65xx.obsMemory.memory;
+        const mpu = this.ee65xx.mpu;
+        const memory = this.ee65xx.obsMemory.memory;
 
         // create MPU registers and flags breakdown
         this.registers = new Registers(mpu);
@@ -450,7 +450,7 @@ export class Debug65xxSession extends LoggingDebugSession {
     protected stackTraceRequest(response: DebugProtocol.StackTraceResponse, args: DebugProtocol.StackTraceArguments): void {
         // *** TODO: seems like we should be able to consolidate some of this ***
         const frames: IRuntimeStackFrame[] = [];
-        let pos = this.sourceMap.get(this.registers.address);
+        const pos = this.sourceMap.get(this.registers.address);
 
         if (pos !== undefined) {
             const stackFrame: IRuntimeStackFrame = {
@@ -568,8 +568,8 @@ export class Debug65xxSession extends LoggingDebugSession {
 
         if (scope === 'registers') {
             for (const reg of Object.entries(this.registers.registers)) {
-                let name = reg[0];
-                let value = reg[1];
+                const name = reg[0];
+                const value = reg[1];
                 variables.push({
                     name: name,
                     value: name === 'P' ? (value as number).toString(2).padStart(8, '0') : this.formatNumber(value),
@@ -580,8 +580,8 @@ export class Debug65xxSession extends LoggingDebugSession {
             }
         } else if (scope === 'flags') {
             for (const reg of Object.entries(this.registers.p)) {
-                let name = reg[0];
-                let value = reg[1];
+                const name = reg[0];
+                const value = reg[1];
                 variables.push({
                     name: name,
                     value: this.formatNumber(value),
@@ -603,9 +603,9 @@ export class Debug65xxSession extends LoggingDebugSession {
                 });
             } else {
                 // specific stack summary
-                let stack = this.stacks.get(scope);
-                let start = stack!.start();
-                let length = stack!.length();
+                const stack = this.stacks.get(scope);
+                const start = stack!.start();
+                const length = stack!.length();
                 for (let i = 0; i < length; i += 16) {
                     variables.push({
                         name: (start + i).toString(16),
@@ -692,8 +692,8 @@ export class Debug65xxSession extends LoggingDebugSession {
             this.registers.setFlag(name, value);
         } else if (ref > 0) {
             //            let address = Math.trunc(ref / 16);
-            let address = parseInt(args.name, 16);
-            let memoryReference = Math.trunc(args.variablesReference / 16);
+            const address = parseInt(args.name, 16);
+            const memoryReference = Math.trunc(args.variablesReference / 16);
             //            value = value & (this.ee65xx.mpu.mode ? 0xff : 0xffff);
             value = value & 0xff;
             this.ee65xx.obsMemory.memory[address] = value;
@@ -769,13 +769,13 @@ export class Debug65xxSession extends LoggingDebugSession {
 
     // execute the current line, stepping over JSR or JSL subroutines
     protected nextRequest(response: DebugProtocol.NextResponse, args: DebugProtocol.NextArguments): void {
-        let mpu = this.ee65xx.mpu;
+        const mpu = this.ee65xx.mpu;
         if (!mpu.waiting) {
-            let opCode = mpu.opCode;
+            const opCode = mpu.opCode;
             if ((opCode === 0x20) || (opCode === 0x22)) {
                 // step over JSR and JSL
                 // *** TODO: we can use this to set up call stack ***
-                let address = this.registers.address + ((opCode === 0x22) ? 4 : 3);
+                const address = this.registers.address + ((opCode === 0x22) ? 4 : 3);
                 this.ee65xx.stepTo(address);
             }
             else {
@@ -792,7 +792,7 @@ export class Debug65xxSession extends LoggingDebugSession {
         }
         else {
             this.sendResponse(response);
-            let se = new StoppedEvent('pause', Debug65xxSession.threadID);
+            const se = new StoppedEvent('pause', Debug65xxSession.threadID);
             (se as DebugProtocol.StoppedEvent).body.description = 'Paused, waiting for input';
             this.sendEvent(se);
         }
@@ -800,15 +800,15 @@ export class Debug65xxSession extends LoggingDebugSession {
 
     // execute the current line, stepping into any JSR or JSL subroutines
     protected stepInRequest(response: DebugProtocol.StepInResponse, args: DebugProtocol.StepInArguments): void {
-        let mpu = this.ee65xx.mpu;
+        const mpu = this.ee65xx.mpu;
         if (!mpu.waiting) {
-            let opCode = mpu.opCode;
+            const opCode = mpu.opCode;
             if ((opCode === 0x20) || (opCode === 0x22)) {
-                let pos = this.sourceMap.get(this.registers.address);
+                const pos = this.sourceMap.get(this.registers.address);
                 if (pos !== undefined) {
                     // set up stackframe for step into JSR and JSL
-                    let nextAddress = pos.address + ((opCode === 0x22) ? 4 : 3);
-                    let frame: IRuntimeStackFrame = {
+                    const nextAddress = pos.address + ((opCode === 0x22) ? 4 : 3);
+                    const frame: IRuntimeStackFrame = {
                         index: 1,
                         name: pos.instruction,
                         file: this.sourceMap.getSourceFile(pos.fileId),
@@ -818,7 +818,7 @@ export class Debug65xxSession extends LoggingDebugSession {
                         nextaddress: nextAddress
                     };
                     if (this.inCall) {
-                        let frames: IRuntimeStackFrame[] = [];
+                        const frames: IRuntimeStackFrame[] = [];
                         frames.push(frame);
                         this.callFrames.forEach(frame => { frames.push(frame); });
                         this.callFrames = frames;
@@ -841,7 +841,7 @@ export class Debug65xxSession extends LoggingDebugSession {
         }
         else {
             this.sendResponse(response);
-            let se = new StoppedEvent('pause', Debug65xxSession.threadID);
+            const se = new StoppedEvent('pause', Debug65xxSession.threadID);
             (se as DebugProtocol.StoppedEvent).body.description = 'Paused, waiting for input';
             this.sendEvent(se);
         }
@@ -864,7 +864,7 @@ export class Debug65xxSession extends LoggingDebugSession {
         }
         else {
             this.sendResponse(response);
-            let se = new StoppedEvent('pause', Debug65xxSession.threadID);
+            const se = new StoppedEvent('pause', Debug65xxSession.threadID);
             (se as DebugProtocol.StoppedEvent).body.description = 'Paused, waiting for input';
             this.sendEvent(se);
         }
@@ -908,7 +908,7 @@ export class Debug65xxSession extends LoggingDebugSession {
                 var mref: string | undefined = undefined;
                 var iv: number | undefined = undefined;
                 let symbol = this.sourceMap.getSymbol(args.expression);
-                let mem = this.ee65xx.obsMemory.memory;
+                const mem = this.ee65xx.obsMemory.memory;
 
                 if (symbol) {
                     switch (symbol.size) {
@@ -944,10 +944,10 @@ export class Debug65xxSession extends LoggingDebugSession {
                 } else if (args.expression.includes(':')) {
                     // check for a valid memory range
                     // *** note hovering will never end up here as it won't capture a ':' ***
-                    let range = args.expression.split(':');
+                    const range = args.expression.split(':');
                     if (range.length === 2) {
-                        let start = parseInt(range[0]);
-                        let end = parseInt(range[1]);
+                        const start = parseInt(range[0]);
+                        const end = parseInt(range[1]);
                         if (end >= start) {
                             value = toHexString(mem.slice(start, end + 1));
                             // display as paged memory
@@ -1137,9 +1137,9 @@ export class Debug65xxSession extends LoggingDebugSession {
 
     // use the Loaded Script Explorer for source files
     protected loadedSourcesRequest(response: DebugProtocol.LoadedSourcesResponse, args: DebugProtocol.LoadedSourcesArguments): void {
-        let sources: DebugProtocol.Source[] = [];
+        const sources: DebugProtocol.Source[] = [];
 
-        for (let file of this.sourceMap.getSourceFiles()) {
+        for (const file of this.sourceMap.getSourceFiles()) {
             sources.push(this.createSource(file));
         }
 
@@ -1162,7 +1162,7 @@ export class Debug65xxSession extends LoggingDebugSession {
 
 //        const loc = this.createSource(this.sourceFile);
 
-        let lastLine = -1;
+        const lastLine = -1;
         const instructions: DebugProtocol.DisassembledInstruction[] = [];
 
 //        const instructions = this.disassemble(baseAddress + offset, count).map(instruction => {
@@ -1235,8 +1235,8 @@ export class Debug65xxSession extends LoggingDebugSession {
     // Currently breakpoints can be set on valid source code lines and cettain
     // registers (see code below).
     public checkBP(): boolean {
-        let address = this.registers.address;
-        let fileId = this.sourceMap.get(address)?.fileId;
+        const address = this.registers.address;
+        const fileId = this.sourceMap.get(address)?.fileId;
 
         // is there a source breakpoint at this address?
         // *** TODO: It would be nice to be able to set a source breakpoint on a
@@ -1265,10 +1265,10 @@ export class Debug65xxSession extends LoggingDebugSession {
             // in VS Code on an item in the Variables pane of the UI through normal
             // UI mechanisms, thus we'd have to add this capability.  Consider
             // adding capability here. ***
-            let pos = this.sourceMap.get(address);
-            let inst = pos?.instruction;
+            const pos = this.sourceMap.get(address);
+            const inst = pos?.instruction;
             let access: string | undefined;
-            let reg_write: RegExp[] = [];
+            const reg_write: RegExp[] = [];
             let name = '';
             let accessType: string | undefined;
             let matches0: RegExpExecArray | null;
@@ -1306,7 +1306,7 @@ export class Debug65xxSession extends LoggingDebugSession {
         //        this.functionBreakpoints.forEach((bp, name) => {
         // for different Map iterators see:
         // https://www.javascripttutorial.net/es6/javascript-map/
-        for (let [name, bp] of this.functionBreakpoints.entries()) {
+        for (const [name, bp] of this.functionBreakpoints.entries()) {
             if (bp.address === address) {
                 this.sendEvent(new StoppedEvent('stopOnFunctionBreakpoint', Debug65xxSession.threadID));
                 return true;
@@ -1315,9 +1315,9 @@ export class Debug65xxSession extends LoggingDebugSession {
 
         // is there a named or opcode exception?
         if (this.namedExceptions) {
-            let exception = this.namedExceptions;
+            const exception = this.namedExceptions;
 //            let inst = this.sourceMap.get(address)?.instruction.slice(0, 3);
-            let inst = this.sourceMap.get(address)?.instruction.split(' ');
+            const inst = this.sourceMap.get(address)?.instruction.split(' ');
             // *** TODO: might consider case sensitivity ***
             if (inst && exception?.includes(inst[0])) {
                 this.sendEvent(new StoppedEvent(inst[0], Debug65xxSession.threadID));
@@ -1325,11 +1325,11 @@ export class Debug65xxSession extends LoggingDebugSession {
             }
         }
         if (this.opcodeExceptions) {
-            let opcode = this.ee65xx.obsMemory.memory[address];
+            const opcode = this.ee65xx.obsMemory.memory[address];
             if (opcode) {
-                let brkCodes = this.opcodeExceptions.split(',');
+                const brkCodes = this.opcodeExceptions.split(',');
                 if (brkCodes) {
-                    for (let brkCode of brkCodes.values()) {
+                    for (const brkCode of brkCodes.values()) {
                         if (opcode === parseInt(brkCode, 16)) {
                             this.sendEvent(new StoppedEvent(opcode.toString(16), Debug65xxSession.threadID));
                             return true;
@@ -1375,17 +1375,17 @@ export class Debug65xxSession extends LoggingDebugSession {
             //            top: () => { return mpu.sp | (mpu.sp < 0x1000 ? 0xff : 0xfff) + 1}, // *** TODO: this is a hack but works for my system ***
             length: () => {
                 let length = 0;
-                let top = (mpu.sp | (mpu.sp < 0x1000 ? 0xff : 0xfff)) + 1 + (mpu.mode ? 0x100 : 0);
-                let start = mpu.sp + 1 + (mpu.mode ? 0x100 : 0);
+                const top = (mpu.sp | (mpu.sp < 0x1000 ? 0xff : 0xfff)) + 1 + (mpu.mode ? 0x100 : 0);
+                const start = mpu.sp + 1 + (mpu.mode ? 0x100 : 0);
                 if (top > start) {
                     length = top - start;
                 }
                 return length;
             },
             value: () => {
-                let top = (mpu.sp | (mpu.sp < 0x1000 ? 0xff : 0xfff)) + 1 + (mpu.mode ? 0x100 : 0);
-                let start = mpu.sp + 1 + (mpu.mode ? 0x100 : 0);
-                let length = top - start;
+                const top = (mpu.sp | (mpu.sp < 0x1000 ? 0xff : 0xfff)) + 1 + (mpu.mode ? 0x100 : 0);
+                const start = mpu.sp + 1 + (mpu.mode ? 0x100 : 0);
+                const length = top - start;
                 if (length > 0) {
                     //                    return toHexString(memory.slice(start, start + Math.min(16, length)), 8)
                     return toHexString(memory.slice(start, start + length), 8);
@@ -1423,17 +1423,17 @@ export class Debug65xxSession extends LoggingDebugSession {
                 //            top: () => { return mpu.sp | (mpu.sp < 0x1000 ? 0xff : 0xfff) + 1 }, // *** TODO: this is a hack but works for my system ***
                 length: () => {
                     let length = 0;
-                    let top = FDSPo;
-                    let start = mpu.x;
+                    const top = FDSPo;
+                    const start = mpu.x;
                     if (top > start) {
                         length = top - start;
                     }
                     return length;
                 },
                 value: () => {
-                    let top = FDSPo;
-                    let start = mpu.x;
-                    let length = top - start;
+                    const top = FDSPo;
+                    const start = mpu.x;
+                    const length = top - start;
                     if (length > 0) {
                         //                    return toHexString(memory.slice(start, start + Math.min(16, length)), 16)
                         return toHexString(memory.slice(start, start + length), 16);
@@ -1449,7 +1449,7 @@ export class Debug65xxSession extends LoggingDebugSession {
             this.stacks.set('fpstack', {
                 name: 'FP',
                 start: () => {
-                    let x = mpu.x;
+                    const x = mpu.x;
                     var sPointer: number;
 
                     // does X point to the floating-point stack?
@@ -1466,17 +1466,17 @@ export class Debug65xxSession extends LoggingDebugSession {
                 //            top: () => { return mpu.sp | (mpu.sp < 0x1000 ? 0xff : 0xfff) + 1 }, // *** TODO: this is a hack but works for my system ***
                 length: () => {
                     let length = 0;
-                    let top = FPSPo; // *** TODO: probably should create a code symbol for this, can get from code source though ***
-                    let start = memory[2] + (memory[3] << 8);
+                    const top = FPSPo; // *** TODO: probably should create a code symbol for this, can get from code source though ***
+                    const start = memory[2] + (memory[3] << 8);
                     if (top > start) {
                         length = top - start;
                     }
                     return length;
                 },
                 value: () => {
-                    let top = FPSPo;
-                    let start = memory[2] + (memory[3] << 8);
-                    let length = top - start;
+                    const top = FPSPo;
+                    const start = memory[2] + (memory[3] << 8);
+                    const length = top - start;
                     if (length > 0) {
                         //                    return toHexString(memory.slice(start, start + Math.min(24, length)), 32)
                         return toHexString(memory.slice(start, start + length), 32);
@@ -1544,7 +1544,7 @@ export class Debug65xxSession extends LoggingDebugSession {
                     // we're only validating breakpoints from our source files
                     // VS Code messes with case so compare files lower case
                     // check if breakpoint is on a valid line
-                    let bpAddress = this.sourceMap.getRev(fileId, bp.line);
+                    const bpAddress = this.sourceMap.getRev(fileId, bp.line);
 
                     // if so, set it as valid and update its address
                     if (bpAddress) {
@@ -1636,7 +1636,7 @@ export class Debug65xxSession extends LoggingDebugSession {
                         return;
                     }
                 }
-                let bpline = this.sourceMap.get(bpAddress)?.sourceLine;
+                const bpline = this.sourceMap.get(bpAddress)?.sourceLine;
                 if (bpline) {
                     bp.verified = true;
                     bp.address = bpAddress;

@@ -16,7 +16,7 @@ var buf = Buffer.alloc(0);
 function putc(value: number): void {
     // gather putc characters until EOL
     if (value === 0xd) {     // is CR
-        console.log(buf.toString());   // console log will add the CR
+        //console.log(buf.toString());   // console log will add the CR
         buf = Buffer.alloc(0);           // clear buffer for next time
     }
     else {

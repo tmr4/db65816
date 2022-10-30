@@ -4,8 +4,8 @@ export interface IDisasm {
 }
 import { instruct, cycletime, extracycles, disassemble } from './mpu65816';
 
-export function instruction(name: string, mode: string, cycles: number, 
-                             xcycles: number=0): Function {
+export function instruction(name: string, mode: string, cycles: number,
+                             xcycles: number = 0): Function {
     function decorate(f: Function, memberName: string, propertyDescriptor: PropertyDescriptor): Function {
         var opcode: number = 0;
         opcode = Number.parseInt(memberName.slice(5), 16);
@@ -17,4 +17,3 @@ export function instruction(name: string, mode: string, cycles: number,
     }
     return decorate;
 }
-

@@ -17,7 +17,7 @@ export class ObsMemory {
         // as it does in Python (? is this true?)
         // *** TODO: look for a more efficient way to do this ***
         this.memory = new Uint8Array(0x40000);
-        for(let i=0; i<0x40000; i++) {
+        for(let i = 0; i < 0x40000; i++) {
             if(bytes[i]  !== undefined) {
                 this.memory[i] = bytes[i];
             }
@@ -28,7 +28,7 @@ export class ObsMemory {
         this.obsMemory = new Proxy(this.memory, {
             set: function(target: Uint8Array, property: string | symbol, value: any, receiver: any): boolean {
                 if(ObsMemory.writeCallbacks.has(property)) {
-                    let callback = ObsMemory.writeCallbacks.get(property);
+                    const callback = ObsMemory.writeCallbacks.get(property);
                     if(callback !== undefined) {
                         callback(value);
                     }
@@ -40,7 +40,7 @@ export class ObsMemory {
             },
             get: function(target: Uint8Array, property: string | symbol, receiver: any): any {
                 if(ObsMemory.readCallbacks.has(property)) {
-                    let callback = ObsMemory.readCallbacks.get(property);
+                    const callback = ObsMemory.readCallbacks.get(property);
                     if(callback !== undefined) {
                         return callback(property);
                     }
@@ -147,7 +147,7 @@ export class ObsMemory {
 //    _subject: [] | null;
 //    _read_subscribers: any;
 //    _write_subscribers: any;
-//    
+//
 //    public constructor(subject=null, addrWidth=16) {
 //        this.physMask = 0xffff
 //        if(addrWidth > 16) {
@@ -241,11 +241,11 @@ export class ObsMemory {
 //}
 
 
-// Argument of type 
+// Argument of type
 //'{ set: (target: Uint8Array, property: string | symbol, value: any, receiver: any) => boolean; }'
-// is not assignable to parameter of type 
+// is not assignable to parameter of type
 //'(target: Uint8Array, property: string | symbol, value: any, receiver: any) => boolean'
-//Type 
+//Type
 //'{ set: (target: Uint8Array, property: string | symbol, value: any, receiver: any) => boolean; }'
 // provides no match for the signature
 //'(target: Uint8Array, property: string | symbol, value: any, receiver: any): boolean'.

@@ -32,7 +32,7 @@ export class Registers {
     private _mpu: MPU65816;
     private _registers: IRegisters65816 = { A: 0, X: 0, Y: 0, P: 0, SP: 0, PC: 0, B: 0, D: 0, K: 0 };
     get registers() {
-        let mpu = this._mpu;
+        const mpu = this._mpu;
         return {
             K: mpu.pbr,
             PC: mpu.pc,
@@ -47,7 +47,7 @@ export class Registers {
     }
 
     public setRegister(register: string, value: number) {
-        let mpu = this._mpu;
+        const mpu = this._mpu;
         switch (register) {
             case 'K':
                 this._registers.K = value;
@@ -92,8 +92,8 @@ export class Registers {
 
     private _p: Flags65816 = { N: 0, V: 0, M: 0, X: 0, D: 0, I: 0, Z: 0, C: 0 };
     get p() {
-        let mpu = this._mpu;
-        let p = this._mpu.p;
+        const mpu = this._mpu;
+        const p = this._mpu.p;
         return {
             N: (p & mpu.NEGATIVE) !== 0 ? 1 : 0,
             V: (p & mpu.OVERFLOW) !== 0 ? 1 : 0,
@@ -107,8 +107,8 @@ export class Registers {
     }
 
     public setFlag(register: string, value: number) {
-        let mpu = this._mpu;
-        let flag = value === 0 ? 0 : 1;
+        const mpu = this._mpu;
+        const flag = value === 0 ? 0 : 1;
         switch (register) {
             case 'N':
                 this._p.N = flag;
@@ -149,7 +149,7 @@ export class Registers {
 
     private _address: number = 0;
     get address() {
-        let mpu = this._mpu;
+        const mpu = this._mpu;
         return mpu.pc + (mpu.pbr << 16);
     }
 
@@ -157,4 +157,3 @@ export class Registers {
         this._mpu = mpu;
     }
 }
-
