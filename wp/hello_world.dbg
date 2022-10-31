@@ -1,6 +1,6 @@
 version	major=2,minor=0
 info	csym=0,file=1,lib=0,line=35,mod=1,scope=1,seg=7,span=32,sym=7,type=2
-file	id=0,name="C:\Users\tmrob\Documents\Projects\debug\hello_world\src\hello_world.s",size=512,mtime=0x635FE909,mod=0
+file	id=0,name="C:\Users\public\Documents\hello_world\src\hello_world.s",size=512,mtime=0x635FE909,mod=0
 line	id=0,file=0,line=25,span=11
 line	id=1,file=0,line=19,span=9
 line	id=2,file=0,line=45,span=27
