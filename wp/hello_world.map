@@ -1,8 +1,9 @@
 Modules list:
 -------------
 hello_world.o:
-    CODE              Offs=000000  Size=000018  Align=00001  Fill=0000
+    CODE              Offs=000000  Size=00001B  Align=00001  Fill=0000
     RODATA            Offs=000000  Size=00000E  Align=00001  Fill=0000
+    BSS               Offs=000000  Size=000001  Align=00001  Fill=0000
     VECTORS           Offs=000000  Size=000020  Align=00001  Fill=0000
 
 
@@ -10,8 +11,9 @@ Segment list:
 -------------
 Name                   Start     End    Size  Align
 ----------------------------------------------------
-CODE                  008000  008017  000018  00001
-RODATA                00F000  00F00D  00000E  00001
+BSS                   000200  000200  000001  00001
+CODE                  008000  00801A  00001B  00001
+RODATA                00E000  00E00D  00000E  00001
 VECTORS               00FFE0  00FFFF  000020  00001
 
 

@@ -9,11 +9,12 @@ VS Code debugger for 65816 assembly code
 * Can set launch arguments for program
 * Follow along with execution directly in assembly source files
 * Control program execution with continue/pause, single step, step-into, step-over,  step-out and run-to-cursor
-* Four types of breakpoints (conditional breakpoints not yet supported):
+* Four types of breakpoints:
     * Source: set directly in assembly source files; stops execution when that line is reached
     * Function: set on function name or memory address; stops execution when that function is entered or memory address is reached during program execution
     * Data: set on X, Y, K, B and D register; stops execution when a write access to these registers is made
     * Instruction mnemonic or opcode (opcode allows a break even if there is no supporting source code)
+* Set break conditions on source and function breakpoints
 * Registers and hardware stack displayed in Variables pane and can be modified when program is paused
 * Watch pane functional for program symbols and memory addresses (not expressions) and the values of these can be changed when the program is paused
 * Variable/watch changes highlighted after each step and on execution pause
@@ -65,6 +66,8 @@ The db65816 extension implements many of VS Code's debugging capabilities.  See 
 # Status and Limitations
 1. This is a work in progress and will likely remain so.  I use it in debugging my 65816 Forth operating system.  I make no claims to its usability or suitability for your uses.  Coding is just a hobby for me, so take care.  Much of the code hasn't been rigorously tested, is without error checking and likely is inefficient.  Still, hopefully it will help others get past the limited documentation regarding VS Code's implementation of Microsoft's DAP.  Another good starting point is Microsoft's [Mock-Debug](https://github.com/Microsoft/vscode-mock-debug) which was the starting point for this project.
 2. The installation steps noted above are all you should need to do if your system is set up like mine.  There may be other setup steps you need to take if you don't have all of the prerequisite software installed already.  In addition to installing [VS Code](https://code.visualstudio.com/) and recommended extensions, the only other thing I had to install to run the hello world example on a fairly clean PC was [NodeJS](https://learn.microsoft.com/en-us/windows/dev-environment/javascript/nodejs-on-windows).  You might want to use a language extension for an enhanced debugging experience such as highlighting instruction mnemonics as shown in the images above.  Search for 6502 in VS Code's extensions marketplace.
-3. I haven't time db65816 a 65C02-based binary but it should work as long as none of the 65C02 specific instructions are used (and assuming your code doesn't rely on other differences between the two processors).  I also haven't tried using cc65.  It doesn't support the 65816.  I suppose it would be possible to link in 65C02 C-based object files to a 65816 project and I assume the ld65 debug file would map to the proper C source file.  I'd like to know the result if you try it out.
-4. RESOLVED (10/24/2022): This seems to have resolved itself as I updated the repository.  Downloading the zipped repository no longer receives a warning.  ORIGINAL ISSUE: I got a Windows Defender warning of a Wacatac Trogen when downloading the zipped repository from GitHub.  My local repository and zips of them scan clean so this is likely a false positive.  However, if you are concerned, don't download or clone the repository.  It will be interesting to see if this continues as I update the repository.
-5. more to come...
+3. You can use defined symbols in conditional breakpoint expressions.  These haven't been extensively tested.  Registers cannot be used in expressions.  I'll likely add this feature soon but I'll likely take an approach where they will hide symbols with the same name.
+4. Conditional expressions are ignored on instruction and opcode breakpoints.
+5. I haven't tried db65816 with a 65C02-based binary but it should work as long as none of the 65C02 specific instructions are used (and assuming your code doesn't rely on other differences between the two processors).  I also haven't tried using C code with cc65.  It doesn't support the 65816.  I suppose it would be possible to link in 65C02 C-based object files to a 65816 project and I assume the ld65 debug file would map to the proper C source file.  I'd like to know the result if you try it out.
+6. RESOLVED (10/24/2022): This seems to have resolved itself as I updated the repository.  Downloading the zipped repository no longer receives a warning.  ORIGINAL ISSUE: I got a Windows Defender warning of a Wacatac Trogen when downloading the zipped repository from GitHub.  My local repository and zips of them scan clean so this is likely a false positive.  However, if you are concerned, don't download or clone the repository.  It will be interesting to see if this continues as I update the repository.
+7. more to come...

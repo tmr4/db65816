@@ -24,11 +24,20 @@ import { SourceMap, ISourceMap } from './sourcemap';
 import { toHexString } from './util';
 import { MPU65816 } from './mpu65816';
 
-export interface IRuntimeBreakpoint {
+interface IBreakpoint {
     id: number;
     line: number;
     address: number;
     verified: boolean;
+    condition?: string;
+    hitCondition?: string;
+    logMessage?: string;
+}
+
+interface IRuntimeBreakpoint {
+    address: number;
+    hitCondition: string;
+    hits: number;
 }
 
 interface IRuntimeStackFrame {
@@ -102,12 +111,12 @@ export class Debug65xxSession extends LoggingDebugSession {
     private src!: string;   // source directory
 
     // source, data and function breakpoints
-    private breakpoints = new Map<number, IRuntimeBreakpoint[]>();
+    private breakpoints = new Map<number, IBreakpoint[]>();
     private dataBreakpoints = new Map<string, string>();
-    // *** TODO: probably makes sense to map function breakpoints by source.
-    // Figure out how to do this. ***
-//    private functionBreakpoints = new Map<string, IRuntimeBreakpoint[]>();
-    private functionBreakpoints = new Map<string, IRuntimeBreakpoint>();
+    // *** TODO: could map function breakpoints by source but likely makes for cumbersome input. ***
+//    private functionBreakpoints = new Map<string, IBreakpoint[]>();
+    private functionBreakpoints = new Map<string, IBreakpoint>();
+    private hitConditionBreakpoints = new Map<number, IRuntimeBreakpoint>();
 
     // since we want to send breakpoint events, we will assign an id to every event
     // so that the frontend can match events with breakpoints.
@@ -148,7 +157,7 @@ export class Debug65xxSession extends LoggingDebugSession {
 //        this.ee65xx.on('stopOnDataBreakpoint', () => {
 //            this.sendEvent(new StoppedEvent('data breakpoint', Debug65xxSession.threadID));
 //        });
-//        this.ee65xx.on('breakpointValidated', (bp: IRuntimeBreakpoint) => {
+//        this.ee65xx.on('breakpointValidated', (bp: IBreakpoint) => {
 //            this.sendEvent(new BreakpointEvent('changed', { verified: bp.verified, id: bp.id } as DebugProtocol.Breakpoint));
 //        });
 //        this.ee65xx.on('stopOnException', (exception) => {
@@ -249,9 +258,9 @@ export class Debug65xxSession extends LoggingDebugSession {
         // Note that these can be set in a source file before the debug adapter is started and can always
         // be set from the editor breakpoint context menu (which appears alway active regardless of these settings
         // unlike the Breakpoint pane edit icon (and context menu item) which is only active when supportsConditionalBreakpoints is true).
-//        response.body.supportsConditionalBreakpoints = true;  // enables Edit Condition in Breakpoint view (but it's appears to be always enabled in editor breakpoint context menu)
-//        response.body.supportsHitConditionalBreakpoints = true;  // if true sends hitCondition (if set) to setBreakPointsRequest, otherwise it isn't even if hitCondition is set
-//        response.body.supportsLogPoints = true;  // if true sends logMessage (if set) to setBreakPointsRequest, otherwise it isn't even if hitCondition is set (also sends hitCondition if set even if supportsHitConditionalBreakpoints is false)
+        response.body.supportsConditionalBreakpoints = true;  // enables Edit Condition in Breakpoint view (but it's appears to be always enabled in editor breakpoint context menu)
+        response.body.supportsHitConditionalBreakpoints = true;  // if true sends hitCondition (if set) to setBreakPointsRequest, otherwise it isn't even if hitCondition is set
+        response.body.supportsLogPoints = true;  // if true sends logMessage (if set) to setBreakPointsRequest, otherwise it isn't even if hitCondition is set (also sends hitCondition if set even if supportsHitConditionalBreakpoints is false)
 
         // step back is possible if we save state after each step, but this could bog down the execution engine
 //        response.body.supportsStepBack = true;      // activates step back and reverse buttons (there are no corresponding Run menu items)
@@ -283,10 +292,11 @@ export class Debug65xxSession extends LoggingDebugSession {
 
         //response.body.supportsExceptionInfoRequest = true;  // Retrieves the details of the exception that caused this event to be raised, not clear when this is used
 
+        // see: https://microsoft.github.io/debug-adapter-protocol/specification#Types_ExceptionOptions for definition
         // see: https://code.visualstudio.com/updates/v1_11#_extension-authoring
         // and: https://github.com/microsoft/vscode-mono-debug/blob/main/src/typescript/extension.ts#L90
         // for example usage
-        //response.body.supportsExceptionOptions = true; // not clear if this is supported or what it does
+        //response.body.supportsExceptionOptions = true;
 
 
         // for full list see: https://microsoft.github.io/debug-adapter-protocol/specification#Types_Capabilities
@@ -407,26 +417,23 @@ export class Debug65xxSession extends LoggingDebugSession {
     }
 
     // *** VS Code requires "setBreakPointsRequest" capitalization here ***
-    protected async setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments): Promise<void> {
+//    protected async setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments): Promise<void> {
 //    protected async setBreakpointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments): Promise<void> {
-    // *** TODO: consider reconfiguring to remove asyn ***
-//    protected setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments): void {
-
-        var fileId = this.sourceMap.getSourceId(args.source.path as string);
-
-        const clientLines = args.lines || [];
+    protected setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments): void {
+        const actualBreakpoints: DebugProtocol.Breakpoint[] = [];
+        const fileId = this.sourceMap.getSourceId(args.source.path as string);
+        const breakpoints = args.breakpoints || [];
 
         // clear all breakpoints for this file
         this.clearBreakpoints(fileId);
 
         // set and verify source breakpoints
-        const actualBreakpoints0 = clientLines.map(async l => {
-            const { verified, line, id } = this.setBreakpoint(fileId, this.convertClientLineToDebugger(l));
-            const bp = new Breakpoint(verified, this.convertDebuggerLineToClient(line)) as DebugProtocol.Breakpoint;
-            bp.id = id;
-            return bp;
-        });
-        const actualBreakpoints = await Promise.all<DebugProtocol.Breakpoint>(actualBreakpoints0);
+        for (const [i, bp] of breakpoints.entries()) {
+            const { verified, line, id } = this.setBreakpoint(fileId, bp);
+            const dbp = new Breakpoint(verified, this.convertDebuggerLineToClient(line)) as DebugProtocol.Breakpoint;
+            dbp.id = id;
+            actualBreakpoints.push(dbp);
+        }
 
         // send back the actual breakpoint positions
         response.body = {
@@ -870,63 +877,48 @@ export class Debug65xxSession extends LoggingDebugSession {
         }
     }
 
-    // process Watch and Hover variable requests
+    // process Watch and Hover variable requests and limited debug console REPL requests
     protected async evaluateRequest(response: DebugProtocol.EvaluateResponse, args: DebugProtocol.EvaluateArguments): Promise<void> {
-
-//        let reply: string | undefined;
-//        let rv: RuntimeVariable | undefined;
+        var result = '';
+        var ref = 0;
+        var mref: string | undefined = undefined;
+        var iv: number | undefined = undefined;
 
         switch (args.context) {
-//            case 'repl':
-//                // handle some REPL commands:
-//                // 'evaluate' supports to create and delete breakpoints from the 'repl':
-////                const matches = /new +([0-9]+)/.exec(args.expression);
-////                if (matches && matches.length === 2) {
-////                    const mbp = await this.ee65xx.setBreakpoint(this.ee65xx.sourceFile, this.convertClientLineToDebugger(parseInt(matches[1])));
-////                    const bp = new Breakpoint(mbp.verified, this.convertDebuggerLineToClient(mbp.line), undefined, this.createSource(this.ee65xx.sourceFile)) as DebugProtocol.Breakpoint;
-////                    bp.id= mbp.id;
-////                    this.sendEvent(new BreakpointEvent('new', bp));
-////                    reply = `breakpoint created`;
-////                } else {
-////                    const matches = /del +([0-9]+)/.exec(args.expression);
-////                    if (matches && matches.length === 2) {
-////                        const mbp = this.ee65xx.clearBreakpoint(this.ee65xx.sourceFile, this.convertClientLineToDebugger(parseInt(matches[1])));
-////                        if (mbp) {
-////                            const bp = new Breakpoint(false) as DebugProtocol.Breakpoint;
-////                            bp.id= mbp.id;
-////                            this.sendEvent(new BreakpointEvent('removed', bp));
-////                            reply = `breakpoint deleted`;
-////                        }
-////                    }
-////                }
-//                // fall through
+            case 'repl':
+                // convert any symbols to their addresses
+                const exp = this.expSymbolToAddress(args.expression);
+                const value = this.expEval(exp);
+                if (value !== undefined) {
+                    result = value.toString();
+                } else {
+                    //response.success = false;
+                    result = '???';
+                }
+                break;
 
             case 'watch':
             case 'hover':
-                var value = '';
-                var ref = 0;
-                var mref: string | undefined = undefined;
-                var iv: number | undefined = undefined;
                 let symbol = this.sourceMap.getSymbol(args.expression);
                 const mem = this.ee65xx.obsMemory.memory;
 
                 if (symbol) {
                     switch (symbol.size) {
                         case 1:
-                            value = mem[symbol.address].toString(16);
+                            result = mem[symbol.address].toString(16);
                             break;
                         case 2:
-                            value = (mem[symbol.address] + (mem[symbol.address + 1] << 8)).toString(16);
+                            result = (mem[symbol.address] + (mem[symbol.address + 1] << 8)).toString(16);
                             break;
                         case 4:
-                            value = (mem[symbol.address] +
+                            result = (mem[symbol.address] +
                                 (mem[symbol.address + 1] << 8) +
                                 (mem[symbol.address + 2] << 16) +
                                 (mem[symbol.address + 3] << 24)).toString(16);
                             break;
                         default:
-                            value = toHexString(mem.slice(symbol.address, symbol.address + symbol.size));
-                            //value = toHexString(mem.slice(symbol.address, symbol.address + 10));
+                            result = toHexString(mem.slice(symbol.address, symbol.address + symbol.size));
+                            //result = toHexString(mem.slice(symbol.address, symbol.address + 10));
                             if (args.context === 'watch') {
                                 ref = 0x10000000 + symbol.address;
                                 //ref = (symbol.address * 16) + Math.min(symbol.size, 0xff);
@@ -939,7 +931,7 @@ export class Debug65xxSession extends LoggingDebugSession {
                             break;
                     }
                     if (args.context === 'hover') {
-                        value = symbol.address.toString(16) + ': ' + value;
+                        result = symbol.address.toString(16) + ': ' + result;
                     }
                 } else if (args.expression.includes(':')) {
                     // check for a valid memory range
@@ -949,7 +941,7 @@ export class Debug65xxSession extends LoggingDebugSession {
                         const start = parseInt(range[0]);
                         const end = parseInt(range[1]);
                         if (end >= start) {
-                            value = toHexString(mem.slice(start, end + 1));
+                            result = toHexString(mem.slice(start, end + 1));
                             // display as paged memory
                             // I don't want to create a handle for every memory range and
                             // we need a way to handle a memory range that starts with 0.
@@ -963,28 +955,31 @@ export class Debug65xxSession extends LoggingDebugSession {
                         }
                     }
                 } else if (!isNaN(parseInt(args.expression))) {
-                    value = mem[parseInt(args.expression)].toString(16);
+                    result = mem[parseInt(args.expression)].toString(16);
                 } else {
                     response.success = false;
                     break;
                 }
-                response.body = {
-                    result: value,
-                    variablesReference: ref,
-                    memoryReference: mref,
-                    indexedVariables: iv
-                };
                 break;
+
             default:
+                // just return address of symbol if found
                 symbol = this.sourceMap.getSymbol(args.expression);
                 if (symbol !== undefined) {
-                    response.body = {
-                        result: symbol.address.toString(),
-                        variablesReference: 0,
-                    };
+                    result = symbol.address.toString();
+                } else {
+                    response.success = false;
                 }
-                response.success = false;
                 break;
+        }
+
+        if (response.success === true) {
+            response.body = {
+                result: result,
+                variablesReference: ref,
+                memoryReference: mref,
+                indexedVariables: iv
+            };
         }
 
         this.sendResponse(response);
@@ -1078,28 +1073,20 @@ export class Debug65xxSession extends LoggingDebugSession {
     // both address and function names are supported
     // *** DAP requires "BreakPoints" capitalization here ***
     protected setFunctionBreakPointsRequest(response: DebugProtocol.SetFunctionBreakpointsResponse, args: DebugProtocol.SetFunctionBreakpointsArguments, request?: DebugProtocol.Request): void {
-        //    protected setFunctionBreakpointsRequest(response: DebugProtocol.SetFunctionBreakpointsResponse, args: DebugProtocol.SetFunctionBreakpointsArguments, request?: DebugProtocol.Request): void {
+    //protected setFunctionBreakpointsRequest(response: DebugProtocol.SetFunctionBreakpointsResponse, args: DebugProtocol.SetFunctionBreakpointsArguments, request?: DebugProtocol.Request): void {
         const actualBreakpoints: DebugProtocol.Breakpoint[] = [];
 
         // clear all function breakpoints for this file
-        //        this.clearFuctionBreakpoints(source);
+        //this.clearFuctionBreakpoints(fileId);
         this.clearFuctionBreakpoints();
 
         // set and verify function breakpoint locations
-        // function breakpoints can either be an address or a source symbol
-        // if a symbol is given then we'll attempt to convert it into an address
-        // for the breakpoint
-        args.breakpoints.forEach((bps) => {
-            let address: number | undefined = parseInt(bps.name);
-            if (Number.isNaN(address)) {
-                address = this.sourceMap.getSymbolAddress(bps.name);
-            }
-            if (address) {
-                const { verified, line, id } = this.setFunctionBreakpoint(bps.name, address);
-                const bp = new Breakpoint(verified, line) as DebugProtocol.Breakpoint;
-                bp.id = id;
-                actualBreakpoints.push(bp);
-            }
+        // *** note that VS Code is sending more properties than indicated by DAP, such as enabled, id and data (only on second time through)
+        args.breakpoints.forEach((bp) => {
+            const { verified, line, id } = this.setFunctionBreakpoint(bp);
+            const dbp = new Breakpoint(verified, line) as DebugProtocol.Breakpoint;
+            dbp.id = id;
+            actualBreakpoints.push(dbp);
         });
 
         // send back the actual breakpoint positions
@@ -1243,17 +1230,46 @@ export class Debug65xxSession extends LoggingDebugSession {
         // given memory address but can only be set on an valid line in the source
         // file through normal UI mechanisms (and thus can't be sent on Forth code
         // in the data area).  We could add the specific capability, like the
-        // ToggleFormatting context menu in Mock-Debug, or perhaps a somewhat hack
-        // like a local "address" variable that when set adds a source or data
-        // breakpoint.  This might also work well with instruction breakpoints
+        // ToggleFormatting context menu or debug window REPL in Mock-Debug, or perhaps
+        // a somewhat hack like a local "address" variable that when set adds a source
+        // or data breakpoint.  This might also work well with instruction breakpoints
         // but those only work in disassembly view and thus have their own
-        // implementation issues. ***
+        // implementation issues.  For now I accomplish this with function breakpoints. ***
         const breakpoints = fileId !== undefined ? this.breakpoints.get(fileId) : undefined;
         if (breakpoints) {
             const bps = breakpoints.filter(bp => bp.address === address);
             if (bps.length > 0) {
-                this.sendEvent(new StoppedEvent('stopOnBreakpoint', Debug65xxSession.threadID));
-                return true;
+                let isCondition: number | undefined = 0;
+                let isHitCondition: number | undefined = 0;
+
+                // check on conditions
+                if (bps[0].condition) {
+                    isCondition = this.expEval(bps[0].condition);
+                }
+                if (bps[0].hitCondition) {
+                    const hitCondition = this.expEval(bps[0].hitCondition);
+                    const hcbp = this.hitConditionBreakpoints.get(address);
+
+                    if (hcbp) {
+                        hcbp.hits++;
+                        if (hcbp.hits === hitCondition) {
+                            isHitCondition = 1;
+                        }
+                    }
+                }
+
+                // we've hit a function breakpoint if either condition is met or
+                // if both conditions are undefined
+                if (isCondition || isHitCondition || (!bps[0].condition && !bps[0].hitCondition)) {
+                    if (bps[0].logMessage) {
+                        // eslint-disable-next-line no-console
+                        console.log(bps[0].logMessage);
+                        return false;
+                    } else {
+                        this.sendEvent(new StoppedEvent('stopOnBreakpoint', Debug65xxSession.threadID));
+                        return true;
+                    }
+                }
             }
         }
 
@@ -1308,8 +1324,37 @@ export class Debug65xxSession extends LoggingDebugSession {
         // https://www.javascripttutorial.net/es6/javascript-map/
         for (const [name, bp] of this.functionBreakpoints.entries()) {
             if (bp.address === address) {
-                this.sendEvent(new StoppedEvent('stopOnFunctionBreakpoint', Debug65xxSession.threadID));
-                return true;
+                let isCondition: number | undefined = 0;
+                let isHitCondition: number | undefined = 0;
+
+                // check on conditions
+                // TODO: logMessage is not available for function breakpoints, consider adding ***
+                //if (bp.logMessage) {
+                //    // eslint-disable-next-line no-console
+                //    console.log(bp.logMessage);
+                //    return false;
+                //}
+                if (bp.condition) {
+                    isCondition = this.expEval(bp.condition);
+                }
+                if (bp.hitCondition) {
+                    const hitCondition = this.expEval(bp.hitCondition);
+                    const hcbp = this.hitConditionBreakpoints.get(address);
+
+                    if (hcbp) {
+                        hcbp.hits++;
+                        if (hcbp.hits === hitCondition) {
+                            isHitCondition = 1;
+                        }
+                    }
+                }
+
+                // we've hit a function breakpoint if either condition is met or
+                // if both conditions are undefined
+                if (isCondition || isHitCondition || (!bp.condition && !bp.hitCondition)) {
+                    this.sendEvent(new StoppedEvent('stopOnFunctionBreakpoint', Debug65xxSession.threadID));
+                    return true;
+                }
             }
         }
 
@@ -1492,26 +1537,53 @@ export class Debug65xxSession extends LoggingDebugSession {
     }
 
     // Set breakpoint in file at given line
-    // source is assumed to be normaized
-    private setBreakpoint(fileId: number | undefined, line: number): IRuntimeBreakpoint {
-        const bp: IRuntimeBreakpoint = { verified: false, line, id: this.breakpointId++, address: 0 };
+    private setBreakpoint(fileId: number | undefined, sbp: DebugProtocol.SourceBreakpoint): IBreakpoint {
+        const line = this.convertClientLineToDebugger(sbp.line);
+        const bp: IBreakpoint = { verified: false, line, id: this.breakpointId++, address: 0, logMessage: sbp.logMessage };
 
         if (fileId !== undefined) {
             let bps = this.breakpoints.get(fileId);
             if (!bps) {
-                bps = new Array<IRuntimeBreakpoint>();
+                bps = new Array<IBreakpoint>();
                 this.breakpoints.set(fileId, bps);
             }
-            bps.push(bp);
 
-            this.verifyBreakpoints(fileId);
+            // check if breakpoint is on a valid line
+            const bpAddress = this.sourceMap.getRev(fileId, bp.line);
+
+            // if so, set it as valid and update its address
+            if (bpAddress) {
+                bp.verified = true;
+                bp.address = bpAddress;
+
+                // convert symbols to their addresses
+                // if condition and/or hitCondition are set
+                if (sbp.condition) {
+                    bp.condition = this.expSymbolToAddress(sbp.condition);
+                }
+                if (sbp.hitCondition) {
+                    bp.hitCondition = this.expSymbolToAddress(sbp.hitCondition);
+
+                    const hcbp = this.hitConditionBreakpoints.get(bpAddress);
+                    if (!hcbp) {
+                        this.hitConditionBreakpoints.set(bpAddress, { address: bpAddress, hitCondition: sbp.hitCondition, hits: 0 });
+                    } else {
+                        // reset runtime breakpoint if hit condition changed
+                        if (hcbp.hitCondition !== sbp.hitCondition) {
+                            hcbp.hitCondition = sbp.hitCondition;
+                            hcbp.hits = 0;
+                        }
+                    }
+                }
+            }
+            bps.push(bp);
         }
         return bp;
     }
 
     // Clear breakpoint in file at given line
     // source is assumed to be normaized
-    //    public clearBreakpoint(path: string, line: number): IRuntimeBreakpoint | undefined {
+    //    public clearBreakpoint(path: string, line: number): IBreakpoint | undefined {
     //        const bps = this.breakpoints.get(this.normalizePathAndCasing(path));
     //        if (bps) {
     //            const index = bps.findIndex(bp => bp.line === line);
@@ -1533,7 +1605,6 @@ export class Debug65xxSession extends LoggingDebugSession {
     }
 
     // Verify breakpoints in given file
-    // source is assumed to be normaized
     private verifyBreakpoints(fileId: number): void {
         const bps = this.breakpoints.get(fileId);
         if (bps) {
@@ -1542,7 +1613,6 @@ export class Debug65xxSession extends LoggingDebugSession {
                 //                if (!bp.verified && bp.line < this.sourceLines.length) {
                 if (!bp.verified) {
                     // we're only validating breakpoints from our source files
-                    // VS Code messes with case so compare files lower case
                     // check if breakpoint is on a valid line
                     const bpAddress = this.sourceMap.getRev(fileId, bp.line);
 
@@ -1598,25 +1668,60 @@ export class Debug65xxSession extends LoggingDebugSession {
     }
 
     // Set funtion breakpoint in file at given address
-    // source is assumed to be normaized
-    // *** TODO: consider saving function breakpoint here, but may require more work later. ***
-    private setFunctionBreakpoint(name: string, address: number): IRuntimeBreakpoint {
-        const bp: IRuntimeBreakpoint = { verified: false, line: 0, id: this.breakpointId++, address: address };
-        //        let bps = this.functionBreakpoints.get(name);
-        //        if (!bps) {
-        //            bps = new Array<IRuntimeBreakpoint>();
-        //            this.functionBreakpoints.set(source, bps);
-        //        }
-        //        bps.push(bp);
+    private setFunctionBreakpoint(fbp: DebugProtocol.FunctionBreakpoint): IBreakpoint {
+        const bp: IBreakpoint = { verified: false, line: 0, id: this.breakpointId++, address: 0 };
+        //let bps = this.functionBreakpoints.get(fileId);
+        //if (!bps) {
+        //    bps = new Array<IBreakpoint>();
+        //    this.functionBreakpoints.set(fileId, bps);
+        //}
+        //bps.push(bp);
 
-        this.functionBreakpoints.set(name, bp);
-        this.verifyFunctionBreakpoints(name, address);
+        // function breakpoints can be either an address or a source symbol
+        // if a symbol is given then we'll attempt to convert it into an address
+        // for the breakpoint
+        let bpAddress: number | undefined = parseInt(fbp.name);
+        if (isNaN(bpAddress)) {
+            bpAddress = this.sourceMap.getSymbolAddress(fbp.name);
+        }
+        if (bpAddress) {
+            bp.verified = true;
+            bp.address = bpAddress;
+
+            // check if address is a valid source line
+            // *** TODO: condider making line undefined to flag the need to disassemble binary ***
+            const bpline = this.sourceMap.get(bpAddress)?.sourceLine;
+            if (bpline) {
+                bp.line = bpline;
+            }
+
+            // convert symbols to their addresses
+            // if condition and/or hitCondition are set
+            if (fbp.condition) {
+                bp.condition = this.expSymbolToAddress(fbp.condition);
+            }
+            if (fbp.hitCondition) {
+                bp.hitCondition = this.expSymbolToAddress(fbp.hitCondition);
+
+                const hcbp = this.hitConditionBreakpoints.get(bpAddress);
+                if (!hcbp) {
+                    this.hitConditionBreakpoints.set(bpAddress, { address: bpAddress, hitCondition: fbp.hitCondition, hits: 0 });
+                } else {
+                    // reset runtime breakpoint if hit condition changed
+                    if ( hcbp.hitCondition !== fbp.hitCondition) {
+                        hcbp.hitCondition = fbp.hitCondition;
+                        hcbp.hits = 0;
+                    }
+                }
+            }
+
+            this.functionBreakpoints.set(fbp.name, bp);
+        }
 
         return bp;
     }
 
     // Verify function breakpoints in given file
-    // source is assumed to be normaized
     private verifyFunctionBreakpoints(name: string, address: number): void {
 
         // is name a function breakpoint?
@@ -1679,6 +1784,42 @@ export class Debug65xxSession extends LoggingDebugSession {
 
     // *******************************************************************************************
     // private helper methods
+
+    // replace symbol in expression with it's adddress
+    // for example if putc = $f001, then the expression
+    // 'putc == 5' becomes '"61441" == 5'
+    private expSymbolToAddress(exp: string): string {
+        const nexp = exp.replace(/(\b[A-z]+[A-z0-9]*)/g, (match, sym) => {
+            const address = this.sourceMap.getSymbolAddress(sym);
+            return address ? '\"' + address.toString() + '\"' : sym;
+        });
+
+        return nexp;
+    }
+
+    // evaluate an experssion and return its value
+    // dereferencing any addresses in an expression
+    // for example if address $f001 = 5 then the
+    // expression '"61441" == 5' returns true
+    private expEval(exp: string): number | undefined {
+        // regexp w/o quotes (?<=")([0-9]+)(?=")
+        const nexp = exp.replace(/("[0-9]+")/g, (match, sym) => {
+            const address = parseInt(sym.slice(1, -1));
+            return this.ee65xx.obsMemory.memory[address].toString();
+        });
+
+        try {
+            const result = Function(`"use strict";return (${nexp})`)();
+
+            if (typeof result === 'boolean') {
+                return result ? 1 : 0;
+            }
+            return result;
+        }
+        catch (err) {
+            return undefined;
+        }
+    }
 
     private formatAddress(x: number, pad = 8) {
 //        return this._addressesInHex ? '0x' + x.toString(16).padStart(pad, '0') : x.toString(10);
