@@ -1,4 +1,9 @@
+# Development Notice
+
+*For ease of use, I've created a Visual Studio Marketplace extension, [65xx Debugger](https://marketplace.visualstudio.com/items?itemName=TRobertson.db65xx), of this project and added its associated repository here [db65xx](https://github.com/tmr4/db65xx).  The 65xx indicates my plan to port my Python-based 65C02 core to Typescript for use in the debugger.  As of 11/1/2022 I'm going to continue development in the db65xx repository.*
+
 # db65816
+
 VS Code debugger for 65816 assembly code
 
 ![Screenshot of db65816 debugger](img/db65816.png)
